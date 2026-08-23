@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import BottomNav from '@/components/BottomNav';
 import { supabase } from '@/lib/supabase';
-import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS } from '@/lib/types';
+import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS, isOpenToAll } from '@/lib/types';
 import SpotDetailSheet from '@/components/SpotDetailSheet';
 import AddSpotModal from '@/components/AddSpotModal';
 
@@ -21,10 +21,16 @@ const FILTERS: { type: SpotType | 'all'; label: string }[] = [
   { type: 'restaurant', label: '🍜 飲食店' },
 ];
 
+/** 選んだ時点で店舗を利用するつもりだと分かる種別 */
+const STORE_TYPES = new Set<SpotType>(['shop', 'shisha', 'cigar', 'cafe', 'bar', 'restaurant']);
+
 export default function MapPage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [filtered, setFiltered] = useState<Spot[]>([]);
   const [activeFilter, setActiveFilter] = useState<SpotType | 'all'>('all');
+  // 既定では誰でも立ち寄れる場所だけを出す。「店舗利用者のみ」を混ぜると、
+  // 行っても吸えない場所が地図の大半を占めてしまう
+  const [showRestricted, setShowRestricted] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -44,13 +50,26 @@ export default function MapPage() {
       });
   }, []);
 
+  // カフェやバーを選んだ時点で店舗利用は前提なので、そこでは条件つきも出す。
+  // 「誰でも利用可だけ」が効くのは「すべて」と「喫煙所」
+  const patronageImplied = activeFilter !== 'all' && STORE_TYPES.has(activeFilter);
+
   useEffect(() => {
-    if (activeFilter === 'all') {
-      setFiltered(spots);
-    } else {
-      setFiltered(spots.filter((s) => s.type === activeFilter));
+    let list = spots;
+    if (activeFilter !== 'all') list = list.filter((s) => s.type === activeFilter);
+    if (!showRestricted && !(activeFilter !== 'all' && STORE_TYPES.has(activeFilter))) {
+      list = list.filter(isOpenToAll);
     }
-  }, [activeFilter, spots]);
+    setFiltered(list);
+  }, [activeFilter, showRestricted, spots]);
+
+  /**
+   * 選択中の種別のうち、利用条件つきの件数。
+   * showRestricted では変えない。0 にするとトグルごと消えて戻せなくなる
+   */
+  const restrictedCount = patronageImplied
+    ? 0
+    : spots.filter((s) => (activeFilter === 'all' || s.type === activeFilter) && !isOpenToAll(s)).length;
 
   const handleLocate = useCallback(() => {
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -215,12 +234,33 @@ export default function MapPage() {
             <div
               style={{
                 padding: '0 16px 10px',
-                fontSize: 13,
-                fontWeight: 600,
-                color: '#888',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
               }}
             >
-              近くのスポット ({filtered.length}件)
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>
+                近くのスポット ({filtered.length}件)
+              </span>
+              {restrictedCount > 0 && (
+                <button
+                  onClick={() => setShowRestricted((v) => !v)}
+                  style={{
+                    marginLeft: 'auto',
+                    flexShrink: 0,
+                    padding: '5px 10px',
+                    borderRadius: 20,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: `1.5px solid ${showRestricted ? '#1a1a1a' : '#e5e5e5'}`,
+                    background: showRestricted ? '#1a1a1a' : 'white',
+                    color: showRestricted ? 'white' : '#666',
+                  }}
+                >
+                  {showRestricted ? '✓ ' : ''}店舗利用者のみも表示（{restrictedCount}）
+                </button>
+              )}
             </div>
             <div style={{ overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'none' }}>
               <div style={{ display: 'flex', gap: 10, padding: '0 16px 16px' }}>
@@ -276,8 +316,10 @@ export default function MapPage() {
                   </div>
                 ))}
                 {filtered.length === 0 && (
-                  <div style={{ color: '#aaa', fontSize: 14, padding: '8px 0' }}>
-                    スポットがありません
+                  <div style={{ color: '#aaa', fontSize: 14, padding: '8px 0', lineHeight: 1.7 }}>
+                    {restrictedCount > 0
+                      ? '誰でも利用できる場所はありません。右上から店舗利用者向けの場所も表示できます。'
+                      : 'スポットがありません'}
                   </div>
                 )}
               </div>

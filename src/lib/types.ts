@@ -47,6 +47,20 @@ export interface Checkin {
   created_at: string;
 }
 
+/**
+ * 誰でも立ち寄れる場所かどうか。
+ *
+ * 「店舗利用者のみ」は買い物や飲食が前提なので、吸える場所を探している人にとっては
+ * 別枠として扱う。一方「地下街利用者のみ」は通りがかれば誰でも該当するので含める。
+ * 「加熱式専用」は吸えるものの制限であって、入れる人の制限ではない。
+ * 条件の記載が無いスポット（大阪市指定喫煙所やユーザー投稿）は誰でも利用可とみなす。
+ */
+export function isOpenToAll(spot: Pick<Spot, 'usage_condition'>): boolean {
+  const cond = spot.usage_condition;
+  if (!cond) return true;
+  return !/利用者のみ|要予約|完全予約|会員/.test(cond) || /地下街利用者のみ/.test(cond);
+}
+
 export const SPOT_TYPE_LABELS: Record<SpotType, string> = {
   smoking: '喫煙所',
   shop: '購入場所',
