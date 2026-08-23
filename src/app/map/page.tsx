@@ -18,6 +18,7 @@ const FILTERS: { type: SpotType | 'all'; label: string }[] = [
   { type: 'cigar', label: '🍃 葉巻' },
   { type: 'cafe', label: '☕ カフェ' },
   { type: 'bar', label: '🍺 バー' },
+  { type: 'restaurant', label: '🍜 飲食店' },
 ];
 
 export default function MapPage() {
@@ -32,7 +33,9 @@ export default function MapPage() {
     supabase
       .from('spots')
       .select('*')
-      .limit(200)
+      // 大阪市内だけで 542 件あり、200 件で切ると取り込んだ喫煙可能店が地図に出ない。
+      // 全件でも 100KB 程度なので今は素直に読む（他都市を足すなら表示範囲で絞ること）
+      .limit(2000)
       .then(({ data }) => {
         if (data) {
           setSpots(data as Spot[]);

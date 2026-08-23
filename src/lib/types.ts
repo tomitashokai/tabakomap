@@ -1,4 +1,4 @@
-export type SpotType = 'smoking' | 'shop' | 'shisha' | 'cigar' | 'cafe' | 'bar';
+export type SpotType = 'smoking' | 'shop' | 'shisha' | 'cigar' | 'cafe' | 'bar' | 'restaurant';
 export type BrandCategory = 'cigarette' | 'heated' | 'shisha' | 'cigar' | 'other';
 export type Availability = 'everywhere' | 'limited' | 'specialty';
 
@@ -49,6 +49,7 @@ export const SPOT_TYPE_LABELS: Record<SpotType, string> = {
   cigar: '葉巻',
   cafe: '喫煙可カフェ',
   bar: '喫煙可バー',
+  restaurant: '喫煙可飲食店',
 };
 
 export const SPOT_TYPE_EMOJIS: Record<SpotType, string> = {
@@ -58,6 +59,7 @@ export const SPOT_TYPE_EMOJIS: Record<SpotType, string> = {
   cigar: '🍃',
   cafe: '☕',
   bar: '🍺',
+  restaurant: '🍜',
 };
 
 export const SPOT_TYPE_COLORS: Record<SpotType, string> = {
@@ -67,4 +69,5 @@ export const SPOT_TYPE_COLORS: Record<SpotType, string> = {
   cigar: '#78350f',
   cafe: '#f59e0b',
   bar: '#ef4444',
+  restaurant: '#059669',
 };

@@ -49,3 +49,6 @@ supabase/.temp/
 
 # mockup files
 mockup*.html
+
+# dry-run の解析結果
+/scripts/osaka-shops-preview.json

@@ -11,7 +11,7 @@ interface Props {
   onAdded: (spot: Spot) => void;
 }
 
-const TYPES: SpotType[] = ['smoking', 'shop', 'shisha', 'cigar', 'cafe', 'bar'];
+const TYPES: SpotType[] = ['smoking', 'shop', 'shisha', 'cigar', 'cafe', 'bar', 'restaurant'];
 
 export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) {
   const { user } = useAuth();

@@ -6,6 +6,7 @@
  * 使い方:
  *   node scripts/screenshot.mjs /map out/map.png
  *   node scripts/screenshot.mjs /brands out/brands.png --width 390 --height 844
+ *   node scripts/screenshot.mjs /map out/r.png --click 飲食店 --center 34.6717,135.5013
  *
  * Git Bash から叩くときは MSYS_NO_PATHCONV=1 を付けること。付けないと `/map` が
  * `C:/Program Files/Git/map` に化けて "Cannot navigate to invalid URL" になる。
@@ -22,6 +23,11 @@ const [, , pathArg = '/map', outArg = 'out/screenshot.png', ...rest] = process.a
 function flag(name, fallback) {
   const i = rest.indexOf(`--${name}`);
   return i === -1 ? fallback : Number(rest[i + 1]);
+}
+
+function strFlag(name, fallback = null) {
+  const i = rest.indexOf(`--${name}`);
+  return i === -1 ? fallback : rest[i + 1];
 }
 
 const BASE = process.env.SCREENSHOT_BASE_URL ?? 'http://localhost:3000';
@@ -48,9 +54,10 @@ const page = await browser.newPage();
 await page.setViewport({ width, height, deviceScaleFactor: 2 });
 
 // 位置情報は許可しておく（現在地ボタンや初期表示のため）
+const [clat, clng] = (strFlag('center') ?? '34.694,135.502').split(',').map(Number);
 const ctx = browser.defaultBrowserContext();
 await ctx.overridePermissions(BASE, ['geolocation']);
-await page.setGeolocation({ latitude: 34.694, longitude: 135.502 });
+await page.setGeolocation({ latitude: clat, longitude: clng });
 
 const consoleErrors = [];
 page.on('console', (m) => {
@@ -61,6 +68,19 @@ page.on('pageerror', (e) => consoleErrors.push(String(e)));
 const url = `${BASE}${pathArg}`;
 console.log(`開く: ${url}`);
 await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+// --click で指定した文字を含むボタンを押す（フィルターチップの確認用）
+const clickText = strFlag('click');
+if (clickText) {
+  await new Promise((r) => setTimeout(r, 3000));
+  const hit = await page.evaluate((t) => {
+    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent?.includes(t));
+    if (!btn) return null;
+    btn.click();
+    return btn.textContent;
+  }, clickText);
+  console.log(hit ? `クリック: ${hit.trim()}` : `「${clickText}」を含むボタンが見つかりません`);
+}
 
 // 地図ページならキャンバスが出るまで待つ
 const canvas = await page.$('.mapboxgl-canvas');
