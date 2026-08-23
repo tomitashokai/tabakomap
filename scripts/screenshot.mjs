@@ -69,17 +69,21 @@ const url = `${BASE}${pathArg}`;
 console.log(`開く: ${url}`);
 await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-// --click で指定した文字を含むボタンを押す（フィルターチップの確認用）
-const clickText = strFlag('click');
-if (clickText) {
+// --click は複数指定できる。フィルターチップ → カード → …と順に押していける
+const clickTargets = rest.reduce((acc, v, i) => (v === '--click' ? [...acc, rest[i + 1]] : acc), []);
+for (const t of clickTargets) {
   await new Promise((r) => setTimeout(r, 3000));
-  const hit = await page.evaluate((t) => {
-    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent?.includes(t));
-    if (!btn) return null;
-    btn.click();
-    return btn.textContent;
-  }, clickText);
-  console.log(hit ? `クリック: ${hit.trim()}` : `「${clickText}」を含むボタンが見つかりません`);
+  const hit = await page.evaluate((text) => {
+    // ボタンを優先し、無ければクリック可能な要素（カードなど）から最も内側のものを選ぶ
+    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent?.includes(text));
+    if (btn) { btn.click(); return btn.textContent; }
+    const clickable = [...document.querySelectorAll('[style*="cursor: pointer"], a')]
+      .filter((e) => e.textContent?.includes(text))
+      .sort((a, b) => a.textContent.length - b.textContent.length)[0];
+    if (clickable) { clickable.click(); return clickable.textContent; }
+    return null;
+  }, t);
+  console.log(hit ? `クリック: ${hit.trim().slice(0, 40)}` : `「${t}」に一致する要素が見つかりません`);
 }
 
 // 地図ページならキャンバスが出るまで待つ

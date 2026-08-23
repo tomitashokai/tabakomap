@@ -52,6 +52,20 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
 
   const buttonDisabled = authLoading || !user || saving || checkinDone;
 
+  const cond = spot.usage_condition;
+  /** 「特になし」以外の条件がついている＝誰でも自由に使えるわけではない */
+  const restricted = !!cond && !/^特になし$/.test(cond);
+
+  // 加熱式は「不可」と「不明」を区別する。インポートしたスポットの多くは記載が無いだけで、
+  // 吸えないわけではない
+  const heatedLabel = /加熱式専用/.test(cond ?? '')
+    ? '加熱式のみ'
+    : spot.is_heated
+      ? '✅ 可'
+      : spot.created_by
+        ? '❌ 不可'
+        : '不明';
+
   return (
     <div
       style={{
@@ -108,6 +122,8 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <span style={badgeStyle}>{SPOT_TYPE_LABELS[spot.type as SpotType]}</span>
+              {/* 誰でも入れる場所と取り違えると無駄足になるので、条件つきは目立たせる */}
+              {restricted && <span style={warnBadgeStyle}>⚠️ {spot.usage_condition}</span>}
               {spot.is_outdoor && <span style={badgeStyle}>屋外</span>}
               {spot.is_heated && <span style={badgeStyle}>加熱式OK</span>}
               {spot.is_24h && <span style={badgeStyle}>24時間</span>}
@@ -170,10 +186,16 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
             <div style={sectionTitleStyle}>施設情報</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <InfoCell label="形態" value={spot.is_outdoor ? '屋外開放型' : '室内'} />
-              <InfoCell label="加熱式" value={spot.is_heated ? '✅ 可' : '❌ 不可'} />
+              <InfoCell label="加熱式" value={heatedLabel} />
               <InfoCell label="営業時間" value={spot.is_24h ? '24時間' : (spot.hours ?? '不明')} />
               <InfoCell label="住所" value={spot.address ?? '未設定'} />
+              {cond && <InfoCell label="利用条件" value={cond} />}
             </div>
+            {restricted && (
+              <p style={{ fontSize: 12, color: '#92400e', background: '#fef3c7', borderRadius: 10, padding: '10px 12px', marginTop: 10, lineHeight: 1.6 }}>
+                この喫煙所は「{cond}」です。誰でも自由に立ち寄れる場所ではないのでご注意ください。
+              </p>
+            )}
           </div>
         </div>
 
@@ -218,6 +240,12 @@ const badgeStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.2)',
   color: 'white',
   backdropFilter: 'blur(4px)',
+};
+
+const warnBadgeStyle: React.CSSProperties = {
+  ...badgeStyle,
+  background: 'rgba(245, 158, 11, 0.95)',
+  color: '#1a1a1a',
 };
 
 const sectionTitleStyle: React.CSSProperties = {

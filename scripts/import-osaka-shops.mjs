@@ -143,10 +143,8 @@ function toSpot(rec) {
   const { name, notes } = splitName(rec.name);
   const cond = rec.cond ?? '';
 
-  // 利用条件は spots に専用カラムが無いので hours に併記して落とさないようにする
   const hoursParts = [];
   if (rec.hours) hoursParts.push(rec.hours);
-  if (cond) hoursParts.push(`利用条件：${cond}`);
   if (notes.length) hoursParts.push(notes.join('、'));
 
   return {
@@ -160,6 +158,9 @@ function toSpot(rec) {
     is_heated: /加熱式/.test(cond),
     is_24h: /終日|24時間/.test(rec.hours ?? ''),
     hours: hoursParts.join(' / ') || null,
+    // 誰でも入れるのか店舗利用者に限るのかは、この店を出すかどうかを左右する情報なので
+    // hours に混ぜず独立して持つ
+    usage_condition: cond || null,
   };
 }
 
@@ -234,12 +235,13 @@ const dupes = spots.filter((s) => existing.has(s.name));
 console.log(`既存 ${existing.size} 件 / 新規 ${fresh.length} 件 / 既存を更新 ${dupes.length} 件`);
 
 const row = (s) =>
-  `(${[s.name, s.type, s.lat, s.lng, s.address, s.is_outdoor, s.is_heated, s.is_24h, s.hours]
+  `(${[s.name, s.type, s.lat, s.lng, s.address, s.is_outdoor, s.is_heated, s.is_24h, s.hours, s.usage_condition]
     .map(lit).join(', ')})`;
 
 if (fresh.length) {
   await runSql(`
-    insert into public.spots (name, type, lat, lng, address, is_outdoor, is_heated, is_24h, hours)
+    insert into public.spots
+      (name, type, lat, lng, address, is_outdoor, is_heated, is_24h, hours, usage_condition)
     values
       ${fresh.map(row).join(',\n      ')};
   `);
@@ -249,16 +251,17 @@ if (dupes.length) {
   // 同名でも別地点なら別施設なので、座標が近いものだけ更新する
   const updated = await runSql(`
     update public.spots s set
-      type       = v.type,
-      address    = v.address,
-      is_outdoor = v.is_outdoor,
-      is_heated  = v.is_heated,
-      is_24h     = v.is_24h,
-      hours      = v.hours,
-      updated_at = now()
+      type            = v.type,
+      address         = v.address,
+      is_outdoor      = v.is_outdoor,
+      is_heated       = v.is_heated,
+      is_24h          = v.is_24h,
+      hours           = v.hours,
+      usage_condition = v.usage_condition,
+      updated_at      = now()
     from (values
       ${dupes.map(row).join(',\n      ')}
-    ) as v(name, type, lat, lng, address, is_outdoor, is_heated, is_24h, hours)
+    ) as v(name, type, lat, lng, address, is_outdoor, is_heated, is_24h, hours, usage_condition)
     where s.name = v.name
       and abs(s.lat - v.lat) < 0.002
       and abs(s.lng - v.lng) < 0.002

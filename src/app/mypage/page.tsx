@@ -13,6 +13,7 @@ const MENU: { icon: string; label: string; href?: string }[] = [
   { icon: '❤️', label: 'お気に入りスポット' },
   { icon: '📍', label: '投稿したスポット', href: '/mypage/spots' },
   { icon: '⚙️', label: '設定' },
+  { icon: '📚', label: 'データの出典', href: '/about/data' },
   { icon: '📖', label: '利用規約' },
   { icon: '🔒', label: 'プライバシーポリシー' },
 ];

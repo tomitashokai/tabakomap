@@ -13,6 +13,11 @@ export interface Spot {
   is_heated: boolean;
   is_24h: boolean;
   hours: string | null;
+  /**
+   * 利用条件の原文（例: 店舗利用者のみ / 地下街利用者のみ / 加熱式専用 / 特になし）。
+   * null は不明。「店舗利用者のみ」なら誰でも入れるわけではないので必ず表示すること
+   */
+  usage_condition: string | null;
   /** 投稿したユーザー。運営がインポートしたスポットは null */
   created_by: string | null;
   created_at: string;

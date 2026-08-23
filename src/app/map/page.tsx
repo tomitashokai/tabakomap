@@ -255,6 +255,24 @@ export default function MapPage() {
                     <div style={{ fontSize: 11, color: '#888' }}>
                       {SPOT_TYPE_LABELS[spot.type as SpotType]}
                     </div>
+                    {/* 「店舗利用者のみ」を隠すと、行っても吸えない場所へ案内することになる */}
+                    {spot.usage_condition && spot.usage_condition !== '特になし' && (
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: '#92400e',
+                          background: '#fef3c7',
+                          borderRadius: 6,
+                          padding: '2px 6px',
+                          marginTop: 6,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {spot.usage_condition}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {filtered.length === 0 && (
