@@ -26,26 +26,21 @@ export default function MapView({ spots, center, onSpotClick }: Props) {
       style: 'mapbox://styles/mapbox/light-v11',
       center: center ?? [135.502, 34.694],
       zoom: 15,
+      // 地名の日本語化はこれだけで足りる。GL JS が composite ソースの URL に language=ja を
+      // 付けるので、タイルからは name_en / name_ko / name_zh が丸ごと落ち、name に日本語が入る。
+      // light-v11 の text-field は coalesce(name_en, name) なので、name_en が無い＝日本語が出る。
+      // （text-field を name_ja 優先に書き換える必要はない。language=ja のタイルには
+      //   name_ja というフィールド自体が存在せず、書き換えると airport-label の
+      //   「空港コード＋名称」の出し分けだけ壊れる）
+      // NavigationControl のツールチップも locale 未指定ならこの言語に追従する。
       language: 'ja',
-      localIdeographFontFamily: "'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', sans-serif",
+      // CJK は端末のフォントで描画される。Mac / Windows / フォールバックの順に並べる。
+      localIdeographFontFamily:
+        "'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo', sans-serif",
     });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
     mapRef.current = map;
-
-    // light-v11 はクラシックスタイルなので language オプションが効かない場合がある。
-    // symbol レイヤーの text-field を name_ja 優先に差し替えておく。
-    map.on('style.load', () => {
-      for (const layer of map.getStyle()?.layers ?? []) {
-        if (layer.type !== 'symbol') continue;
-        if (!map.getLayoutProperty(layer.id, 'text-field')) continue;
-        map.setLayoutProperty(layer.id, 'text-field', [
-          'coalesce',
-          ['get', 'name_ja'],
-          ['get', 'name'],
-        ]);
-      }
-    });
 
     return () => {
       map.remove();
