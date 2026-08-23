@@ -29,7 +29,12 @@ npx eslint src      # ※ brands/page.tsx と map/page.tsx に set-state-in-effe
 
 ## クラウドセッション（claude.ai/code）で作業するとき
 
-- 最初に `npm install` を走らせる。依存はクローンに含まれない
+- 依存のインストールは `.claude/settings.json` の SessionStart フックが
+  `scripts/install_pkgs.sh` を呼んで自動で行う。`CLAUDE_CODE_REMOTE` を見て
+  クラウドでだけ走るので、ローカルでは何もしない
+- **クラウド環境の「セットアップスクリプト」に `npm install` を書かないこと。**
+  あれはリポジトリのクローン前に走るため `package.json` が無く ENOENT で落ちる。
+  依存の導入は SessionStart フック側の仕事
 - Node は 20/21/22 が入っている。Docker や主要な言語ランタイムも利用できる
 - **`SUPABASE_ACCESS_TOKEN` は無い前提で動くこと。** Cloud environment の環境変数には
   専用のシークレットストアが無く、その環境を使う人は誰でも値を読めるため置いていない。
