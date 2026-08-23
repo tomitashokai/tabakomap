@@ -1,12 +1,52 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import { useAuth } from '@/components/AuthProvider';
+import { fetchUserCheckinStats, type CheckinStats } from '@/lib/checkins';
+import { fetchSpotsByUser } from '@/lib/spots';
 
-const CHECKIN_COUNT = 7;
-const NEXT_REWARD = 10;
+const EMPTY_STATS: CheckinStats = { total: 0, spots: 0, thisMonth: 0 };
+
+const MENU: { icon: string; label: string; href?: string }[] = [
+  { icon: '❤️', label: 'お気に入りスポット' },
+  { icon: '📍', label: '投稿したスポット', href: '/mypage/spots' },
+  { icon: '⚙️', label: '設定' },
+  { icon: '📖', label: '利用規約' },
+  { icon: '🔒', label: 'プライバシーポリシー' },
+];
 
 export default function MyPage() {
-  const progress = (CHECKIN_COUNT / NEXT_REWARD) * 100;
+  const { user, loading: authLoading, isAnonymous } = useAuth();
+  const [stats, setStats] = useState<CheckinStats>(EMPTY_STATS);
+  const [postedCount, setPostedCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+
+    fetchUserCheckinStats(user.id).then((s) => {
+      if (!active) return;
+      setStats(s);
+      setLoading(false);
+    });
+
+    fetchSpotsByUser(user.id).then((list) => {
+      if (!active) return;
+      setPostedCount(list.length);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  // 次のマイルストーンは 10 回刻み
+  const goal = (Math.floor(stats.total / 10) + 1) * 10;
+  const progress = (stats.total / goal) * 100;
+  const busy = authLoading || loading;
 
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -33,37 +73,36 @@ export default function MyPage() {
             >
               🧑
             </div>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>ゲストユーザー</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>
+                {isAnonymous || !user ? 'ゲストユーザー' : (user.email ?? 'ユーザー')}
+              </div>
               <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
-                ログインして記録を保存しよう
+                {user ? `ID: ${user.id.slice(0, 8)}` : '接続中…'}
               </div>
             </div>
           </div>
-          <button
+          <div
             style={{
-              width: '100%',
-              padding: 14,
-              background: '#1a1a1a',
-              color: 'white',
-              border: 'none',
-              borderRadius: 14,
-              fontSize: 15,
-              fontWeight: 700,
-              cursor: 'pointer',
+              background: '#f9f9f9',
+              borderRadius: 12,
+              padding: '12px 14px',
+              fontSize: 12,
+              color: '#888',
+              lineHeight: 1.6,
             }}
           >
-            ログイン / 新規登録
-          </button>
+            記録はこのブラウザに紐づいて保存されています。
+            <br />
+            メール登録による他端末との同期は準備中です。
+          </div>
         </div>
 
         {/* Checkin progress */}
         <div style={{ background: 'white', margin: '0 12px 12px', borderRadius: 20, padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>
-            🔥 チェックイン実績
-          </div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>🔥 チェックイン実績</div>
           <div style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>
-            あと {NEXT_REWARD - CHECKIN_COUNT} 回で広告非表示ゲット！
+            {busy ? '読み込み中…' : `あと ${goal - stats.total} 回で次のバッジを獲得！`}
           </div>
           <div
             style={{
@@ -74,18 +113,19 @@ export default function MyPage() {
               marginBottom: 8,
             }}
           >
+            {/* 角丸は親の overflow:hidden に任せ、レイアウトを起こさない transform で伸縮させる */}
             <div
               style={{
                 height: '100%',
-                width: `${progress}%`,
                 background: '#f59e0b',
-                borderRadius: 4,
-                transition: 'width 0.4s ease',
+                transformOrigin: 'left',
+                transform: `scaleX(${busy ? 0 : progress / 100})`,
+                transition: 'transform 0.4s ease',
               }}
             />
           </div>
           <div style={{ fontSize: 12, color: '#aaa', textAlign: 'right' }}>
-            {CHECKIN_COUNT} / {NEXT_REWARD} 回
+            {stats.total} / {goal} 回
           </div>
         </div>
 
@@ -101,36 +141,44 @@ export default function MyPage() {
             gap: 16,
           }}
         >
-          <StatCell value={CHECKIN_COUNT} label="チェックイン" />
-          <StatCell value={2} label="スポット投稿" />
-          <StatCell value={14} label="お気に入り" />
+          <StatCell value={stats.total} label="チェックイン" busy={busy} />
+          <StatCell value={stats.spots} label="訪問スポット" busy={busy} />
+          <StatCell value={stats.thisMonth} label="今月" busy={busy} />
         </div>
 
         {/* Menu */}
         <div style={{ background: 'white', margin: '0 12px', borderRadius: 20, overflow: 'hidden' }}>
-          {[
-            { icon: '❤️', label: 'お気に入りスポット' },
-            { icon: '📍', label: '投稿したスポット' },
-            { icon: '⚙️', label: '設定' },
-            { icon: '📖', label: '利用規約' },
-            { icon: '🔒', label: 'プライバシーポリシー' },
-          ].map((item, i) => (
-            <div
-              key={item.label}
-              style={{
-                padding: '16px 20px',
-                borderTop: i > 0 ? '1px solid #f5f5f5' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                cursor: 'pointer',
-              }}
-            >
-              <span style={{ fontSize: 20 }}>{item.icon}</span>
-              <span style={{ fontSize: 15, fontWeight: 500 }}>{item.label}</span>
-              <span style={{ marginLeft: 'auto', color: '#ccc' }}>›</span>
-            </div>
-          ))}
+          {MENU.map((item, i) => {
+            const row = (
+              <>
+                <span style={{ fontSize: 20 }}>{item.icon}</span>
+                <span style={{ fontSize: 15, fontWeight: 500 }}>{item.label}</span>
+                {item.label === '投稿したスポット' && postedCount > 0 && (
+                  <span style={{ fontSize: 13, color: '#888', marginLeft: 6 }}>{postedCount}</span>
+                )}
+                <span style={{ marginLeft: 'auto', color: '#ccc' }}>›</span>
+              </>
+            );
+            const style: React.CSSProperties = {
+              padding: '16px 20px',
+              borderTop: i > 0 ? '1px solid #f5f5f5' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              cursor: 'pointer',
+              color: 'inherit',
+              textDecoration: 'none',
+            };
+            return item.href ? (
+              <Link key={item.label} href={item.href} style={style}>
+                {row}
+              </Link>
+            ) : (
+              <div key={item.label} style={style}>
+                {row}
+              </div>
+            );
+          })}
         </div>
       </div>
       <BottomNav />
@@ -138,10 +186,10 @@ export default function MyPage() {
   );
 }
 
-function StatCell({ value, label }: { value: number; label: string }) {
+function StatCell({ value, label, busy }: { value: number; label: string; busy: boolean }) {
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 24, fontWeight: 800, color: '#f59e0b' }}>{value}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: '#f59e0b' }}>{busy ? '–' : value}</div>
       <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{label}</div>
     </div>
   );

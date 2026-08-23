@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/AuthProvider';
 import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS } from '@/lib/types';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 const TYPES: SpotType[] = ['smoking', 'shop', 'shisha', 'cigar', 'cafe', 'bar'];
 
 export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) {
+  const { user } = useAuth();
   const [type, setType] = useState<SpotType>('smoking');
   const [name, setName] = useState('');
   const [isOutdoor, setIsOutdoor] = useState(true);
@@ -30,6 +32,11 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
       setError('位置情報を取得できませんでした。位置情報を許可してください。');
       return;
     }
+    // RLS が created_by = auth.uid() を要求するので、セッション確定前は登録させない
+    if (!user) {
+      setError('接続中です。少し待ってからもう一度お試しください。');
+      return;
+    }
 
     setSaving(true);
     const { data, error: err } = await supabase
@@ -42,6 +49,7 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
         is_outdoor: isOutdoor,
         is_heated: isHeated,
         is_24h: is24h,
+        created_by: user.id,
       })
       .select()
       .single();

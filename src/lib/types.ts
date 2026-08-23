@@ -13,6 +13,8 @@ export interface Spot {
   is_heated: boolean;
   is_24h: boolean;
   hours: string | null;
+  /** 投稿したユーザー。運営がインポートしたスポットは null */
+  created_by: string | null;
   created_at: string;
   updated_at: string;
   distance?: number;
