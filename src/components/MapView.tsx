@@ -26,10 +26,26 @@ export default function MapView({ spots, center, onSpotClick }: Props) {
       style: 'mapbox://styles/mapbox/light-v11',
       center: center ?? [135.502, 34.694],
       zoom: 15,
+      language: 'ja',
+      localIdeographFontFamily: "'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', sans-serif",
     });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
     mapRef.current = map;
+
+    // light-v11 はクラシックスタイルなので language オプションが効かない場合がある。
+    // symbol レイヤーの text-field を name_ja 優先に差し替えておく。
+    map.on('style.load', () => {
+      for (const layer of map.getStyle()?.layers ?? []) {
+        if (layer.type !== 'symbol') continue;
+        if (!map.getLayoutProperty(layer.id, 'text-field')) continue;
+        map.setLayoutProperty(layer.id, 'text-field', [
+          'coalesce',
+          ['get', 'name_ja'],
+          ['get', 'name'],
+        ]);
+      }
+    });
 
     return () => {
       map.remove();

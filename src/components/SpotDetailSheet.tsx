@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS } from '@/lib/types';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/AuthProvider';
+import { createCheckin, fetchSpotCheckinCount, hasCheckedInToday } from '@/lib/checkins';
 
 interface Props {
   spot: Spot;
@@ -10,12 +11,46 @@ interface Props {
 }
 
 export default function SpotDetailSheet({ spot, onClose }: Props) {
+  const { user, loading: authLoading } = useAuth();
   const [checkinDone, setCheckinDone] = useState(false);
+  const [count, setCount] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchSpotCheckinCount(spot.id).then((c) => {
+      if (active) setCount(c);
+    });
+
+    if (user) {
+      hasCheckedInToday(spot.id, user.id).then((done) => {
+        if (active) setCheckinDone(done);
+      });
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [spot.id, user]);
 
   const handleCheckin = async () => {
-    await supabase.from('checkins').insert({ spot_id: spot.id });
-    setCheckinDone(true);
+    if (!user || saving || checkinDone) return;
+    setSaving(true);
+    setError(null);
+
+    const ok = await createCheckin(spot.id, user.id);
+    if (ok) {
+      setCheckinDone(true);
+      setCount((c) => (c ?? 0) + 1);
+    } else {
+      setError('チェックインに失敗しました。通信環境を確認してください。');
+    }
+    setSaving(false);
   };
+
+  const buttonDisabled = authLoading || !user || saving || checkinDone;
 
   return (
     <div
@@ -97,30 +132,37 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
             >
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>
-                  {checkinDone ? '✅ チェックイン済み！' : '🔥 ここで吸った？'}
+                  {checkinDone ? '✅ 今日はチェックイン済み！' : '🔥 ここで吸った？'}
                 </div>
                 <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
-                  チェックインで情報を更新
+                  {count === null
+                    ? 'チェックインで情報を更新'
+                    : count === 0
+                      ? 'まだ誰もチェックインしていません'
+                      : `これまでに ${count} 回チェックイン`}
                 </div>
               </div>
               <button
                 onClick={handleCheckin}
-                disabled={checkinDone}
+                disabled={buttonDisabled}
                 style={{
-                  background: checkinDone ? '#d1d5db' : '#f59e0b',
+                  background: buttonDisabled ? '#d1d5db' : '#f59e0b',
                   color: '#1a1a1a',
                   border: 'none',
                   padding: '10px 18px',
                   borderRadius: 12,
                   fontSize: 14,
                   fontWeight: 700,
-                  cursor: checkinDone ? 'default' : 'pointer',
+                  cursor: buttonDisabled ? 'default' : 'pointer',
                   flexShrink: 0,
                 }}
               >
-                {checkinDone ? '済み' : '吸った ✓'}
+                {checkinDone ? '済み' : saving ? '記録中…' : '吸った ✓'}
               </button>
             </div>
+            {error && (
+              <div style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>{error}</div>
+            )}
           </div>
 
           {/* Info grid */}
