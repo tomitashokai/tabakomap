@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS } from '@/lib/types';
 import { useAuth } from '@/components/AuthProvider';
 import { createCheckin, fetchSpotCheckinCount, hasCheckedInToday } from '@/lib/checkins';
@@ -200,7 +201,21 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
         </div>
 
         {/* Close button */}
-        <div style={{ padding: '12px 16px', flexShrink: 0 }}>
+        <div style={{ padding: '12px 16px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Link
+            href={`/spots/${spot.id}`}
+            style={{
+              display: 'block',
+              textAlign: 'center',
+              padding: 12,
+              fontSize: 13,
+              color: '#f59e0b',
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            この場所の詳細ページを開く →
+          </Link>
           <button
             onClick={onClose}
             style={{
