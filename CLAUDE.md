@@ -21,12 +21,25 @@ npx eslint src      # ※ brands/page.tsx と map/page.tsx に set-state-in-effe
 
 ## 環境変数
 
-`.env.example` にキー名がある。値はリポジトリに入っていないので、
-ローカルなら `.env.local`、クラウドセッションなら Cloud environment の環境変数に設定する。
+`.env.example` にキー名がある。値はリポジトリに入っていないので、ローカルなら `.env.local`。
 `NEXT_PUBLIC_MAPBOX_TOKEN` と Supabase の2つが無いとビルドも検証も通らない。
 
 **秘密情報をコマンドラインに直接書かないこと。** 許可したコマンドは文字列のまま
 `.claude/settings.local.json` に保存されるため平文で残る。ファイルか環境変数から読ませる。
+
+## クラウドセッション（claude.ai/code）で作業するとき
+
+- 最初に `npm install` を走らせる。依存はクローンに含まれない
+- Node は 20/21/22 が入っている。Docker や主要な言語ランタイムも利用できる
+- **`SUPABASE_ACCESS_TOKEN` は無い前提で動くこと。** Cloud environment の環境変数には
+  専用のシークレットストアが無く、その環境を使う人は誰でも値を読めるため置いていない。
+  したがって `scripts/import-*.mjs` など DB へ書き込むスクリプトは実行できない。
+  スキーマやデータを変えたいときは `supabase/migrations/` に SQL を書いてコミットし、
+  適用はローカルか Supabase のダッシュボードから行う
+- `scripts/screenshot.mjs` は実 Chrome に依存しているので動かない。
+  見た目の確認は `npx tsc --noEmit` と `npx next build` を通したうえで、
+  デプロイ後に https://tabakomap.vercel.app をブラウザで見る
+- master に push すれば Vercel が自動デプロイする。ここはローカルと同じ
 
 ## DB スキーマ
 
