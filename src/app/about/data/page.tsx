@@ -2,7 +2,9 @@ import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 
 export const metadata = {
-  title: 'データの出典 | タバコマップ',
+  title: 'データの出典',
+  description: 'タバコマップが掲載している喫煙所・地図・銘柄データの出典元と利用条件を明示しています。',
+  alternates: { canonical: '/about/data' },
 };
 
 interface Source {

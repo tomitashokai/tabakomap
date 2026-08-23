@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import BottomNav from '@/components/BottomNav';
 import NewsList from '@/components/NewsList';
 import { fetchNews } from '@/lib/news-feed';
+
+export const metadata: Metadata = {
+  title: 'たばこニュース',
+  description: '喫煙所・受動喫煙防止条例・加熱式タバコなど、たばこ関連ニュースをまとめて配信。',
+  alternates: { canonical: '/news' },
+};
 
 export default async function NewsPage() {
   const items = await fetchNews();
