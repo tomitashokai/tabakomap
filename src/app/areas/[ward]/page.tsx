@@ -6,7 +6,8 @@ import { fetchAllSpots } from '@/lib/spots';
 import { groupByWard } from '@/lib/areas';
 import { SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS, isOpenToAll } from '@/lib/types';
 
-export const dynamic = 'force-dynamic';
+// 1時間ごとに再生成する。データ取得側（supabase-cached.ts）の revalidate と揃えること
+export const revalidate = 3600;
 
 interface Props {
   params: Promise<{ ward: string }>;

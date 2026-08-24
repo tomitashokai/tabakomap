@@ -4,7 +4,8 @@ import BottomNav from '@/components/BottomNav';
 import { fetchAllSpots } from '@/lib/spots';
 import { groupByWard } from '@/lib/areas';
 
-export const dynamic = 'force-dynamic';
+// 1時間ごとに再生成する。データ取得側（supabase-cached.ts）の revalidate と揃えること
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: 'エリアから探す',

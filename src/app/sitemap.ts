@@ -4,8 +4,9 @@ import { groupByWard } from '@/lib/areas';
 
 const BASE_URL = 'https://tabakomap.vercel.app';
 
-// スポットは投稿で増減するので、ビルド時ではなくリクエスト時に生成する
-export const dynamic = 'force-dynamic';
+// スポットは投稿で増減するのでビルド時に固定しない。ただしクローラが叩くたびに
+// 542件を読み直す必要はないので1時間ごとの再生成にする
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

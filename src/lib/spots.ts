@@ -1,23 +1,31 @@
 import { supabase } from './supabase';
+import { supabasePublic } from './supabase-cached';
 import type { Spot } from './types';
+
+/*
+ * 以下2つは SEO 用の公開ページ専用。キャッシュ付きの supabasePublic を使う。
+ *
+ * ここでは失敗時に空配列や null を返さず投げる。結果がキャッシュに載るため、
+ * 一時的な DB エラーを「0件」や「存在しない」として焼き付けると、それが
+ * 1時間そのまま配られてしまう（ビルド時なら空のページが、実行時なら 404 が固定される）。
+ * 投げればビルドは落ちて前のデプロイが残り、実行時は古いページが配られ続ける。
+ */
 
 /** 大阪市内は 542 件あるので全件読み（他都市を足すなら表示範囲で絞ること） */
 export async function fetchAllSpots(): Promise<Spot[]> {
-  const { data, error } = await supabase.from('spots').select('*').limit(2000);
-  if (error) {
-    console.error('[spots] fetch all failed:', error.message);
-    return [];
-  }
+  const { data, error } = await supabasePublic.from('spots').select('*').limit(2000);
+  if (error) throw new Error(`[spots] fetch all failed: ${error.message}`);
   return (data ?? []) as Spot[];
 }
 
-/** id 指定でスポット1件を取得。無ければ null */
+/** id 指定でスポット1件を取得。該当が無ければ null（エラーとは区別する） */
 export async function fetchSpotById(id: string): Promise<Spot | null> {
-  const { data, error } = await supabase.from('spots').select('*').eq('id', id).maybeSingle();
-  if (error) {
-    console.error('[spots] fetch by id failed:', error.message);
-    return null;
-  }
+  const { data, error } = await supabasePublic
+    .from('spots')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(`[spots] fetch by id failed: ${error.message}`);
   return data as Spot | null;
 }
 
