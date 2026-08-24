@@ -13,6 +13,18 @@ interface Props {
 
 const TYPES: SpotType[] = ['smoking', 'shop', 'shisha', 'cigar', 'cafe', 'bar', 'restaurant'];
 
+/**
+ * 未入力のまま登録させると isOpenToAll() が「誰でも利用可」扱いにしてしまい、
+ * 店舗利用者限定の喫煙室を誰でも入れる場所として案内してしまう。
+ * 選択式にして、既存データで使われている表記（CLAUDE.md 記載）に揃える
+ */
+const CONDITIONS: { value: string | null; label: string }[] = [
+  { value: null, label: '特になし（誰でも利用可）' },
+  { value: '店舗利用者のみ', label: '店舗利用者のみ' },
+  { value: '会員のみ', label: '会員のみ' },
+  { value: '要予約', label: '要予約' },
+];
+
 export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) {
   const { user } = useAuth();
   const [type, setType] = useState<SpotType>('smoking');
@@ -20,6 +32,7 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
   const [isOutdoor, setIsOutdoor] = useState(true);
   const [isHeated, setIsHeated] = useState(false);
   const [is24h, setIs24h] = useState(false);
+  const [usageCondition, setUsageCondition] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -49,6 +62,7 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
         is_outdoor: isOutdoor,
         is_heated: isHeated,
         is_24h: is24h,
+        usage_condition: usageCondition,
         created_by: user.id,
       })
       .select()
@@ -144,6 +158,34 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Usage condition */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={labelStyle}>利用条件</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {CONDITIONS.map((c) => (
+              <button
+                key={c.label}
+                onClick={() => setUsageCondition(c.value)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 20,
+                  border: `1.5px solid ${usageCondition === c.value ? '#1a1a1a' : '#e5e5e5'}`,
+                  background: usageCondition === c.value ? '#1a1a1a' : 'white',
+                  color: usageCondition === c.value ? 'white' : '#555',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: '#aaa', marginTop: 6, lineHeight: 1.5 }}>
+            「店舗利用者のみ」などは、行っても吸えないという失敗を防ぐために地図上で注意表示されます
+          </p>
         </div>
 
         {/* Toggles */}
