@@ -24,6 +24,25 @@ const FILTERS: { type: SpotType | 'all'; label: string }[] = [
 /** 選んだ時点で店舗を利用するつもりだと分かる種別 */
 const STORE_TYPES = new Set<SpotType>(['shop', 'shisha', 'cigar', 'cafe', 'bar', 'restaurant']);
 
+/** 「近くのスポット」シートの高さ */
+const SHEET_HEIGHT = 220;
+/** BottomNav の高さ。シートはこの上に載せる（下に潜るとカードが切れる） */
+const NAV_HEIGHT = 72;
+/** シートとボタンの間隔 */
+const CONTROL_GAP = 12;
+/** 検索バー + フィルターチップが覆っている高さ */
+const TOP_CHROME = 110;
+
+/** ホームバーのある端末では BottomNav がその分せり上がるので追従させる */
+const ABOVE_NAV = `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom))`;
+const ABOVE_SHEET = `calc(${NAV_HEIGHT + SHEET_HEIGHT + CONTROL_GAP}px + env(safe-area-inset-bottom))`;
+
+/**
+ * 地図の上に乗っている UI の分だけカメラに余白を持たせる。
+ * これが無いと現在地に移動したときピンがフィルターチップやシートの下に潜る
+ */
+const MAP_PADDING = { top: TOP_CHROME, bottom: NAV_HEIGHT + SHEET_HEIGHT, left: 0, right: 0 };
+
 export default function MapPage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [filtered, setFiltered] = useState<Spot[]>([]);
@@ -90,6 +109,7 @@ export default function MapPage() {
           spots={filtered}
           center={userLocation ?? undefined}
           onSpotClick={setSelectedSpot}
+          padding={MAP_PADDING}
         />
 
         {/* Search bar */}
@@ -161,8 +181,10 @@ export default function MapPage() {
           style={{
             position: 'absolute',
             left: 16,
-            bottom: 200,
-            zIndex: 10,
+            // シート（高さ 220 / zIndex 20）の上に出す。
+            // 200 のままだとシートに飲み込まれて押せない
+            bottom: ABOVE_SHEET,
+            zIndex: 30,
             display: 'flex',
             gap: 10,
           }}
@@ -189,7 +211,7 @@ export default function MapPage() {
           style={{
             position: 'absolute',
             right: 16,
-            bottom: 200,
+            bottom: ABOVE_SHEET,
             width: 44,
             height: 44,
             background: 'white',
@@ -197,7 +219,7 @@ export default function MapPage() {
             borderRadius: '50%',
             boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
             fontSize: 20,
-            zIndex: 10,
+            zIndex: 30,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -212,14 +234,16 @@ export default function MapPage() {
           <div
             style={{
               position: 'absolute',
-              bottom: 0,
+              // BottomNav（fixed / zIndex 100）の上に載せる。
+              // bottom:0 だと下 72px がナビに隠れてカードが切れる
+              bottom: ABOVE_NAV,
               left: 0,
               right: 0,
               background: 'white',
               borderRadius: '24px 24px 0 0',
               zIndex: 20,
               boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
-              height: 220,
+              height: SHEET_HEIGHT,
             }}
           >
             <div

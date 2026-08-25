@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import mapboxgl from 'mapbox-gl';
+import mapboxgl, { type PaddingOptions } from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Spot, SpotType, SPOT_TYPE_COLORS, SPOT_TYPE_EMOJIS } from '@/lib/types';
 
@@ -11,9 +11,14 @@ interface Props {
   spots: Spot[];
   center?: [number, number];
   onSpotClick: (spot: Spot) => void;
+  /**
+   * 検索バー・フィルターチップ・ボトムシートが地図の上に重なっている分の余白。
+   * これを渡さないと現在地に移動したときピンがチップの下に潜り込む
+   */
+  padding?: PaddingOptions;
 }
 
-export default function MapView({ spots, center, onSpotClick }: Props) {
+export default function MapView({ spots, center, onSpotClick, padding }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -47,6 +52,13 @@ export default function MapView({ spots, center, onSpotClick }: Props) {
       mapRef.current = null;
     };
   }, []);
+
+  // 余白を入れておくと、以降の easeTo が「UI に隠れていない部分」の中心に寄せてくれる
+  useEffect(() => {
+    if (padding && mapRef.current) {
+      mapRef.current.setPadding(padding);
+    }
+  }, [padding]);
 
   useEffect(() => {
     if (center && mapRef.current) {
