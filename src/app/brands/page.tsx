@@ -14,6 +14,25 @@ const CATS: { key: BrandCategory | 'all'; label: string }[] = [
   { key: 'other', label: '🌿 その他' },
 ];
 
+/**
+ * 一覧をカテゴリチップと同じ並びで出すための順序。CATS から引くので
+ * チップの並びを変えれば一覧も追従する。
+ *
+ * name 昇順のままだと先頭が専門店限定のシーシャ・葉巻で埋まり、
+ * 45件ある紙巻きが17番目まで沈む
+ */
+const CAT_ORDER = CATS.filter((c) => c.key !== 'all').map((c) => c.key) as BrandCategory[];
+
+/** category が null の行は末尾に寄せる */
+function catRank(c: BrandCategory | null): number {
+  const i = c ? CAT_ORDER.indexOf(c) : -1;
+  return i === -1 ? CAT_ORDER.length : i;
+}
+
+function byCategoryThenName(a: Brand, b: Brand): number {
+  return catRank(a.category) - catRank(b.category) || a.name.localeCompare(b.name, 'ja');
+}
+
 const CAT_EMOJIS: Record<BrandCategory, string> = {
   cigarette: '🚬',
   heated: '🔥',
@@ -37,13 +56,15 @@ export default function BrandsPage() {
   useEffect(() => {
     supabase
       .from('brands')
+      // カテゴリの任意順は PostgREST の order では表現できない
+      // （アルファベット順になり cigar が先頭に来る）ので取得後に並べ替える
       .select('*')
-      .order('name')
       .limit(200)
       .then(({ data }) => {
         if (data) {
-          setBrands(data as Brand[]);
-          setFiltered(data as Brand[]);
+          const sorted = (data as Brand[]).sort(byCategoryThenName);
+          setBrands(sorted);
+          setFiltered(sorted);
         }
       });
   }, []);
