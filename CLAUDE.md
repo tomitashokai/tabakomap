@@ -24,6 +24,11 @@ npx eslint src      # ※ brands/page.tsx と map/page.tsx に set-state-in-effe
 `.env.example` にキー名がある。値はリポジトリに入っていないので、ローカルなら `.env.local`。
 `NEXT_PUBLIC_MAPBOX_TOKEN` と Supabase の2つが無いとビルドも検証も通らない。
 
+`NEXT_PUBLIC_GA_ID` は任意で、未設定なら GA のタグを描画しない。ローカルには入れないこと
+（自分のアクセスが本番の数値に混ざる）。**ローカル検証だけならダミー値で足りる。**
+`NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co` などを渡せば `next build` は
+コンパイルと型チェックを通過し、dev サーバーも起動して DB を見ないページは検証できる。
+
 **秘密情報をコマンドラインに直接書かないこと。** 許可したコマンドは文字列のまま
 `.claude/settings.local.json` に保存されるため平文で残る。ファイルか環境変数から読ませる。
 
@@ -161,6 +166,11 @@ fetch はデフォルトでキャッシュされないので ISR は `next: { re
   master と競合はしない。実画面での目視確認だけが済んでいない
 - 喫煙可能店の種別は店名からの推測。業態が読めない店は restaurant に寄っている
   （`scripts/import-osaka-shops.mjs` の `TYPE_RULES` で調整可能）
-- お気に入りスポット、Osaka Metro の喫煙所データ、GA / Speed Insights は未着手
+- お気に入りスポット、Osaka Metro の喫煙所データは未着手
 - マップの spots 取得は全件読み（limit 2000）。他都市を足すなら表示範囲で絞ること
 - 検証用に作った匿名ユーザーが `auth.users` に残っている
+- **GA / Speed Insights はコードは入ったが計測は始まっていない。** ダッシュボード側の
+  作業が3つ残っている：GA4 プロパティを作って測定 ID を取る、Vercel の環境変数に
+  `NEXT_PUBLIC_GA_ID` を設定する、Vercel で Speed Insights を有効化する
+- `/about/privacy` に事業者名と問い合わせ先の記載が無い。決めたら追記する
+- マイページの「利用規約」「設定」「お気に入りスポット」はメニュー項目だけでリンク先が無い

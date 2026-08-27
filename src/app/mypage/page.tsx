@@ -15,7 +15,7 @@ const MENU: { icon: string; label: string; href?: string }[] = [
   { icon: '⚙️', label: '設定' },
   { icon: '📚', label: 'データの出典', href: '/about/data' },
   { icon: '📖', label: '利用規約' },
-  { icon: '🔒', label: 'プライバシーポリシー' },
+  { icon: '🔒', label: 'プライバシーポリシー', href: '/about/privacy' },
 ];
 
 export default function MyPage() {
