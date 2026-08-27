@@ -136,6 +136,13 @@ mapnavi リンクの URL（`mpx=` `mpy=`）から取れる。パースはレコ�
 タイルから `name_en` が丸ごと落ちるので、`coalesce(name_en, name)` が日本語に解決される。
 Mapbox Static Images API は `language` を無視するので検証には使えない。
 
+### 銘柄一覧の並び順はカテゴリ順。DB の order には戻さない
+`.order('name')` に戻すと先頭が専門店限定のシーシャ・葉巻で埋まり、45件ある紙巻きが
+17番目まで沈む。`.order('category')` でも直らない（アルファベット順で cigar が先頭）。
+カテゴリの任意順は PostgREST で表現できないので、`src/app/brands/page.tsx` の
+`byCategoryThenName` で取得後にクライアント側で並べる。順序は `CATS` から引いており、
+カテゴリチップの並びを変えれば一覧も追従する。
+
 ### Next.js 16
 `AGENTS.md` の指示どおり `node_modules/next/dist/docs/` を読んでから書く。
 fetch はデフォルトでキャッシュされないので ISR は `next: { revalidate: N }` を明示する。
@@ -149,9 +156,9 @@ fetch はデフォルトでキャッシュされないので ISR は `next: { re
 ## 残タスク
 
 - 銘柄データの価格49件が null。JT / フィリップモリスジャパン / BATジャパンの公式で裏取りする
-- 銘柄DBの並び順が name 昇順で、先頭がシーシャになり主要な紙巻きが埋もれる
-- マップの「＋登録」ボタンがボトムシートに隠れ、ピンが上端のフィルターチップに重なる
-- スポット追加モーダルに利用条件の入力が無く、ユーザー投稿は全部「誰でも利用可」扱いになる
+- マップの「＋登録」ボタンがボトムシートに隠れ、ピンが上端のフィルターチップに重なる。
+  **修正が `origin/claude/gallant-thompson-8bltsj` に1コミットあるが未マージ。**
+  master と競合はしない。実画面での目視確認だけが済んでいない
 - 喫煙可能店の種別は店名からの推測。業態が読めない店は restaurant に寄っている
   （`scripts/import-osaka-shops.mjs` の `TYPE_RULES` で調整可能）
 - お気に入りスポット、Osaka Metro の喫煙所データ、GA / Speed Insights は未着手
