@@ -145,8 +145,15 @@ Mapbox Static Images API は `language` を無視するので検証には使え�
 `.order('name')` に戻すと先頭が専門店限定のシーシャ・葉巻で埋まり、45件ある紙巻きが
 17番目まで沈む。`.order('category')` でも直らない（アルファベット順で cigar が先頭）。
 カテゴリの任意順は PostgREST で表現できないので、`src/app/brands/page.tsx` の
-`byCategoryThenName` で取得後にクライアント側で並べる。順序は `CATS` から引いており、
-カテゴリチップの並びを変えれば一覧も追従する。
+`byCategoryThenName` で取得後にクライアント側で並べる。順序は `types.ts` の
+`BRAND_CATEGORY_ORDER` が単一の出所で、カテゴリチップも一覧もそこを見る。
+
+### 並べ替える前に DB 側で limit を掛けない
+関連銘柄を `.eq('category', c).limit(8)` で取ったら、紙巻きはメビウス7種、加熱式は
+テリア6種で埋まった。順序を指定していないので任意の8件が返り、そのあと名前順に
+並べても顔ぶれは変わらない。回遊先としては役に立たない。
+`src/lib/brands.ts` の `pickRelated` でカテゴリ全件（最大45件）から選び直している。
+同シリーズを3件までに抑え、残りはシリーズ違いで埋める。
 
 ### Next.js 16
 `AGENTS.md` の指示どおり `node_modules/next/dist/docs/` を読んでから書く。

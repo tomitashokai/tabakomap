@@ -1,51 +1,44 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { supabase } from '@/lib/supabase';
-import { Brand, BrandCategory } from '@/lib/types';
+import {
+  AVAILABILITY_LABELS,
+  BRAND_CATEGORY_EMOJIS,
+  BRAND_CATEGORY_ORDER,
+  type Brand,
+  type BrandCategory,
+} from '@/lib/types';
 
+/** チップに入る短縮ラベル。詳細ページ側の正式名（BRAND_CATEGORY_LABELS）とは別に持つ */
+const CHIP_LABELS: Record<BrandCategory, string> = {
+  cigarette: '紙巻',
+  heated: '加熱式',
+  shisha: 'シーシャ',
+  cigar: '葉巻',
+  other: 'その他',
+};
+
+/** チップの並びは BRAND_CATEGORY_ORDER に従うので、一覧の並び順と食い違わない */
 const CATS: { key: BrandCategory | 'all'; label: string }[] = [
   { key: 'all', label: 'すべて' },
-  { key: 'cigarette', label: '🚬 紙巻' },
-  { key: 'heated', label: '🔥 加熱式' },
-  { key: 'shisha', label: '💨 シーシャ' },
-  { key: 'cigar', label: '🍃 葉巻' },
-  { key: 'other', label: '🌿 その他' },
+  ...BRAND_CATEGORY_ORDER.map((key) => ({
+    key,
+    label: `${BRAND_CATEGORY_EMOJIS[key]} ${CHIP_LABELS[key]}`,
+  })),
 ];
-
-/**
- * 一覧をカテゴリチップと同じ並びで出すための順序。CATS から引くので
- * チップの並びを変えれば一覧も追従する。
- *
- * name 昇順のままだと先頭が専門店限定のシーシャ・葉巻で埋まり、
- * 45件ある紙巻きが17番目まで沈む
- */
-const CAT_ORDER = CATS.filter((c) => c.key !== 'all').map((c) => c.key) as BrandCategory[];
 
 /** category が null の行は末尾に寄せる */
 function catRank(c: BrandCategory | null): number {
-  const i = c ? CAT_ORDER.indexOf(c) : -1;
-  return i === -1 ? CAT_ORDER.length : i;
+  const i = c ? BRAND_CATEGORY_ORDER.indexOf(c) : -1;
+  return i === -1 ? BRAND_CATEGORY_ORDER.length : i;
 }
 
 function byCategoryThenName(a: Brand, b: Brand): number {
   return catRank(a.category) - catRank(b.category) || a.name.localeCompare(b.name, 'ja');
 }
-
-const CAT_EMOJIS: Record<BrandCategory, string> = {
-  cigarette: '🚬',
-  heated: '🔥',
-  shisha: '💨',
-  cigar: '🍃',
-  other: '🌿',
-};
-
-const AVAIL_LABELS: Record<string, string> = {
-  everywhere: '全国流通',
-  limited: '限定流通',
-  specialty: '専門店のみ',
-};
 
 export default function BrandsPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -147,8 +140,9 @@ export default function BrandsPage() {
         ) : (
           <div style={{ padding: '12px 12px 0' }}>
             {filtered.map((brand) => (
-              <div
+              <Link
                 key={brand.id}
+                href={`/brands/${brand.id}`}
                 style={{
                   background: 'white',
                   borderRadius: 16,
@@ -158,6 +152,8 @@ export default function BrandsPage() {
                   gap: 12,
                   alignItems: 'center',
                   cursor: 'pointer',
+                  textDecoration: 'none',
+                  color: 'inherit',
                 }}
               >
                 <div
@@ -173,7 +169,7 @@ export default function BrandsPage() {
                     flexShrink: 0,
                   }}
                 >
-                  {brand.category ? CAT_EMOJIS[brand.category] : '🚬'}
+                  {brand.category ? BRAND_CATEGORY_EMOJIS[brand.category] : '🚬'}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 3 }}>{brand.name}</div>
@@ -187,7 +183,7 @@ export default function BrandsPage() {
                     )}
                     {brand.availability && (
                       <span style={{ ...tagStyle, background: '#fef3c7', color: '#92400e' }}>
-                        {AVAIL_LABELS[brand.availability]}
+                        {AVAILABILITY_LABELS[brand.availability]}
                       </span>
                     )}
                   </div>
@@ -197,7 +193,8 @@ export default function BrandsPage() {
                     ¥{brand.price}
                   </div>
                 )}
-              </div>
+                <span style={{ color: '#ccc', flexShrink: 0 }}>›</span>
+              </Link>
             ))}
           </div>
         )}

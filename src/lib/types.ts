@@ -90,3 +90,39 @@ export const SPOT_TYPE_COLORS: Record<SpotType, string> = {
   bar: '#ef4444',
   restaurant: '#059669',
 };
+
+/**
+ * 銘柄カテゴリの表示順。一覧のカテゴリチップと一覧の並び順の両方がここを見る。
+ *
+ * name 昇順で並べると先頭が専門店限定のシーシャ・葉巻で埋まり、45件ある紙巻きが
+ * 17番目まで沈むため、カテゴリを主キーにして並べている
+ */
+export const BRAND_CATEGORY_ORDER: BrandCategory[] = [
+  'cigarette',
+  'heated',
+  'shisha',
+  'cigar',
+  'other',
+];
+
+export const BRAND_CATEGORY_LABELS: Record<BrandCategory, string> = {
+  cigarette: '紙巻きたばこ',
+  heated: '加熱式たばこ',
+  shisha: 'シーシャ',
+  cigar: '葉巻',
+  other: 'その他',
+};
+
+export const BRAND_CATEGORY_EMOJIS: Record<BrandCategory, string> = {
+  cigarette: '🚬',
+  heated: '🔥',
+  shisha: '💨',
+  cigar: '🍃',
+  other: '🌿',
+};
+
+export const AVAILABILITY_LABELS: Record<Availability, string> = {
+  everywhere: '全国流通',
+  limited: '限定流通',
+  specialty: '専門店のみ',
+};

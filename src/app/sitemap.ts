@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { fetchAllSpots } from '@/lib/spots';
+import { fetchAllBrands } from '@/lib/brands';
 import { groupByWard } from '@/lib/areas';
 
 const BASE_URL = 'https://tabakomap.vercel.app';
@@ -19,7 +20,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/about/privacy`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
   ];
 
-  const spots = await fetchAllSpots();
+  // スポットと銘柄は互いに独立なので並行して読む
+  const [spots, brands] = await Promise.all([fetchAllSpots(), fetchAllBrands()]);
 
   const areaRoutes: MetadataRoute.Sitemap = groupByWard(spots).map(({ ward }) => ({
     url: `${BASE_URL}/areas/${encodeURIComponent(ward)}`,
@@ -35,5 +37,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [...staticRoutes, ...areaRoutes, ...spotRoutes];
+  // brands には updated_at が無いので lastModified は再生成時刻になる
+  const brandRoutes: MetadataRoute.Sitemap = brands.map((brand) => ({
+    url: `${BASE_URL}/brands/${brand.id}`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  }));
+
+  return [...staticRoutes, ...areaRoutes, ...spotRoutes, ...brandRoutes];
 }
