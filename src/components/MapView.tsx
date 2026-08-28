@@ -87,6 +87,14 @@ export default function MapView({ spots, center, onSpotClick, padding }: Props) 
         box-shadow: 0 3px 8px rgba(0,0,0,0.25);
         cursor: pointer;
       `;
+      /*
+       * ピンは div なので、名前を付けないと読み上げも自動検証も「何のピンか」を
+       * 特定できない。title はデスクトップでのホバー表示にもなる
+       */
+      el.title = spot.name;
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', `${spot.name}の詳細を開く`);
+
       const inner = document.createElement('span');
       inner.style.cssText = 'transform: rotate(45deg); font-size: 18px; display: block; line-height: 1;';
       inner.textContent = SPOT_TYPE_EMOJIS[spot.type as SpotType];

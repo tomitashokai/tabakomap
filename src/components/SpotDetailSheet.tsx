@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS } from '@/lib/types';
+import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS, isOpenToAll } from '@/lib/types';
 import { useAuth } from '@/components/AuthProvider';
 import { createCheckin, fetchSpotCheckinCount, hasCheckedInToday } from '@/lib/checkins';
 
@@ -54,12 +54,31 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
   const buttonDisabled = authLoading || !user || saving || checkinDone;
 
   const cond = spot.usage_condition;
-  /** 「特になし」以外の条件がついている＝誰でも自由に使えるわけではない */
-  const restricted = !!cond && !/^特になし$/.test(cond);
+
+  /** 表示に値する条件が書かれているか */
+  const hasCondition = !!cond && !/^特になし$/.test(cond);
+
+  /**
+   * 入れる人が限られるか。判定は `isOpenToAll()` に揃える。
+   *
+   * ここで「特になし以外はすべて制限あり」と独自に判定していたため、
+   * 「加熱式専用」3件と「地下街利用者のみ」8件（ホワイティうめだ、ドーチカ、
+   * なんばウォークなど）が、地図には既定で出るのにピンを開くと
+   * 「誰でも自由に立ち寄れる場所ではない」と警告される状態になっていた。
+   * 同じスポットの `/spots/[id]` と `/areas/[ward]` は `isOpenToAll` を見ていて
+   * 警告しないので、どこから開いたかで言うことが変わっていた
+   */
+  const entryRestricted = !isOpenToAll(spot);
+
+  /** 加熱式専用は吸えるものの制限。入れる人の制限ではないので別に案内する */
+  const heatedOnly = /加熱式専用/.test(cond ?? '');
+
+  /** 通りがかれば誰でも該当するので入場制限にはしないが、条件そのものは伝える */
+  const undergroundOnly = /地下街利用者のみ/.test(cond ?? '');
 
   // 加熱式は「不可」と「不明」を区別する。インポートしたスポットの多くは記載が無いだけで、
   // 吸えないわけではない
-  const heatedLabel = /加熱式専用/.test(cond ?? '')
+  const heatedLabel = heatedOnly
     ? '加熱式のみ'
     : spot.is_heated
       ? '✅ 可'
@@ -123,8 +142,10 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <span style={badgeStyle}>{SPOT_TYPE_LABELS[spot.type as SpotType]}</span>
-              {/* 誰でも入れる場所と取り違えると無駄足になるので、条件つきは目立たせる */}
-              {restricted && <span style={warnBadgeStyle}>⚠️ {spot.usage_condition}</span>}
+              {/* 誰でも入れる場所と取り違えると無駄足になるので、入場制限は目立たせる。
+                  入場制限ではない条件（加熱式専用・地下街利用者のみ）は ⚠️ を付けない */}
+              {entryRestricted && <span style={warnBadgeStyle}>⚠️ {cond}</span>}
+              {!entryRestricted && hasCondition && <span style={badgeStyle}>{cond}</span>}
               {spot.is_outdoor && <span style={badgeStyle}>屋外</span>}
               {spot.is_heated && <span style={badgeStyle}>加熱式OK</span>}
               {spot.is_24h && <span style={badgeStyle}>24時間</span>}
@@ -192,9 +213,19 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
               <InfoCell label="住所" value={spot.address ?? '未設定'} />
               {cond && <InfoCell label="利用条件" value={cond} />}
             </div>
-            {restricted && (
-              <p style={{ fontSize: 12, color: '#92400e', background: '#fef3c7', borderRadius: 10, padding: '10px 12px', marginTop: 10, lineHeight: 1.6 }}>
+            {entryRestricted && (
+              <p style={warnNoteStyle}>
                 この喫煙所は「{cond}」です。誰でも自由に立ち寄れる場所ではないのでご注意ください。
+              </p>
+            )}
+            {!entryRestricted && undergroundOnly && (
+              <p style={infoNoteStyle}>
+                地下街の利用者向けの喫煙室です。通りがかれば誰でも該当します。
+              </p>
+            )}
+            {heatedOnly && (
+              <p style={infoNoteStyle}>
+                加熱式たばこ専用です。紙巻きたばこは吸えません。
               </p>
             )}
           </div>
@@ -261,6 +292,24 @@ const warnBadgeStyle: React.CSSProperties = {
   ...badgeStyle,
   background: 'rgba(245, 158, 11, 0.95)',
   color: '#1a1a1a',
+};
+
+/** 行っても入れない可能性がある注意。琥珀で目立たせる */
+const warnNoteStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: '#92400e',
+  background: '#fef3c7',
+  borderRadius: 10,
+  padding: '10px 12px',
+  marginTop: 10,
+  lineHeight: 1.6,
+};
+
+/** 入れるが条件がある、という補足。警告色にすると入れないように読める */
+const infoNoteStyle: React.CSSProperties = {
+  ...warnNoteStyle,
+  color: '#555',
+  background: '#f5f5f5',
 };
 
 const sectionTitleStyle: React.CSSProperties = {
