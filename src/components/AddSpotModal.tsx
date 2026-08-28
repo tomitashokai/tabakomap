@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS } from '@/lib/types';
@@ -25,8 +25,56 @@ const CONDITIONS: { value: string | null; label: string }[] = [
   { value: '要予約', label: '要予約' },
 ];
 
+/** getCurrentPosition の失敗理由。原因ごとに言い分けないと、次にどうすればよいか分からない */
+const GEO_ERRORS: Record<number, string> = {
+  1: '位置情報の利用が許可されていません。ブラウザの設定で許可してください。',
+  2: '現在地を特定できませんでした。屋外や窓際で試すと取得できることがあります。',
+  3: '現在地の取得に時間がかかっています。',
+};
+
+const geoAvailable = () => typeof navigator !== 'undefined' && 'geolocation' in navigator;
+
 export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) {
   const { user } = useAuth();
+
+  /*
+   * 位置はモーダル自身で取りに行く。
+   * 以前は userLocation が無いと「現在地ボタンを押してください」と出すだけだったが、
+   * その 📍 ボタンはモーダルの裏にあって押せない。外をタップすれば閉じるものの
+   * 入力が消えるので、登録するには全部打ち直すしかなかった
+   */
+  const [coords, setCoords] = useState<[number, number] | null>(userLocation);
+  const [locating, setLocating] = useState(!userLocation && geoAvailable());
+  const [locateError, setLocateError] = useState(
+    geoAvailable() ? '' : 'この端末では位置情報を利用できません。'
+  );
+
+  const locate = useCallback(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords([pos.coords.longitude, pos.coords.latitude]);
+        setLocating(false);
+      },
+      (err) => {
+        setLocating(false);
+        setLocateError(GEO_ERRORS[err.code] ?? '現在地を取得できませんでした。');
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  }, []);
+
+  // 効果の本体では setState しない（set-state-in-effect に触れる）。
+  // 「取得中」は locating の初期値で表し、確定はコールバック側で行う
+  useEffect(() => {
+    if (!userLocation && geoAvailable()) locate();
+  }, [userLocation, locate]);
+
+  const retryLocate = () => {
+    setLocating(true);
+    setLocateError('');
+    locate();
+  };
+
   const [type, setType] = useState<SpotType>('smoking');
   const [name, setName] = useState('');
   const [isOutdoor, setIsOutdoor] = useState(true);
@@ -41,8 +89,8 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
       setError('名前を入力してください');
       return;
     }
-    if (!userLocation) {
-      setError('位置情報を取得できませんでした。位置情報を許可してください。');
+    if (!coords) {
+      setError(locating ? '現在地の取得を待っています。' : locateError || '現在地を取得できませんでした。');
       return;
     }
     // RLS が created_by = auth.uid() を要求するので、セッション確定前は登録させない
@@ -57,8 +105,8 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
       .insert({
         name: name.trim(),
         type,
-        lat: userLocation[1],
-        lng: userLocation[0],
+        lat: coords[1],
+        lng: coords[0],
         is_outdoor: isOutdoor,
         is_heated: isHeated,
         is_24h: is24h,
@@ -195,33 +243,70 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
           <Toggle label="24時間" value={is24h} onChange={setIs24h} />
         </div>
 
-        {!userLocation && (
-          <p style={{ fontSize: 12, color: '#f59e0b', marginBottom: 12, textAlign: 'center' }}>
-            ⚠️ 現在地ボタンを押して位置を取得してください
-          </p>
-        )}
+        {/* 現在地の状態。登録は現在地に紐づくので、取れているかを常に見せる */}
+        <div
+          style={{
+            background: coords ? '#f9f9f9' : '#fffbeb',
+            borderRadius: 12,
+            padding: '10px 12px',
+            marginBottom: 12,
+            fontSize: 12,
+            lineHeight: 1.6,
+            color: coords ? '#666' : '#92400e',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <span style={{ flex: 1 }}>
+            {coords
+              ? `📍 現在地に登録します（${coords[1].toFixed(5)}, ${coords[0].toFixed(5)}）`
+              : locating
+                ? '📍 現在地を取得しています…'
+                : `⚠️ ${locateError || '現在地を取得できませんでした。'}`}
+          </span>
+          {!coords && !locating && geoAvailable() && (
+            <button
+              onClick={retryLocate}
+              style={{
+                flexShrink: 0,
+                padding: '6px 12px',
+                borderRadius: 20,
+                border: '1.5px solid #92400e',
+                background: 'white',
+                color: '#92400e',
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              もう一度試す
+            </button>
+          )}
+        </div>
         {error && (
           <p style={{ fontSize: 12, color: '#ef4444', marginBottom: 12, textAlign: 'center' }}>
             {error}
           </p>
         )}
 
+        {/* 現在地が無いまま押せると、エラーを見るためだけに押させることになる */}
         <button
           onClick={handleSubmit}
-          disabled={saving}
+          disabled={saving || !coords}
           style={{
             width: '100%',
             padding: 16,
-            background: saving ? '#d1d5db' : '#1a1a1a',
+            background: saving || !coords ? '#d1d5db' : '#1a1a1a',
             color: 'white',
             border: 'none',
             borderRadius: 16,
             fontSize: 16,
             fontWeight: 700,
-            cursor: saving ? 'default' : 'pointer',
+            cursor: saving || !coords ? 'default' : 'pointer',
           }}
         >
-          {saving ? '登録中...' : 'この場所を登録する'}
+          {saving ? '登録中...' : locating ? '現在地を取得中…' : 'この場所を登録する'}
         </button>
       </div>
     </div>
