@@ -7,6 +7,7 @@
  *   node scripts/screenshot.mjs /map out/map.png
  *   node scripts/screenshot.mjs /brands out/brands.png --width 390 --height 844
  *   node scripts/screenshot.mjs /map out/r.png --click 飲食店 --center 34.6717,135.5013
+ *   node scripts/screenshot.mjs /map out/s.png --type 梅田        # 検索欄に打ち込む
  *
  * Git Bash から叩くときは MSYS_NO_PATHCONV=1 を付けること。付けないと `/map` が
  * `C:/Program Files/Git/map` に化けて "Cannot navigate to invalid URL" になる。
@@ -68,6 +69,20 @@ page.on('pageerror', (e) => consoleErrors.push(String(e)));
 const url = `${BASE}${pathArg}`;
 console.log(`開く: ${url}`);
 await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+/*
+ * --type は最初の input に打ち込む。検索欄が生きているかは、値を入れて
+ * 結果が変わるところまで見ないと分からない。--click より先に処理する
+ */
+const typeText = strFlag('type');
+if (typeText) {
+  await page.waitForSelector('input', { timeout: 10000 });
+  await page.click('input');
+  // React の onChange を1文字ずつ通すため delay を入れる
+  await page.type('input', typeText, { delay: 40 });
+  console.log(`入力: ${typeText}`);
+  await new Promise((r) => setTimeout(r, 2000));
+}
 
 // --click は複数指定できる。フィルターチップ → カード → …と順に押していける
 const clickTargets = rest.reduce((acc, v, i) => (v === '--click' ? [...acc, rest[i + 1]] : acc), []);

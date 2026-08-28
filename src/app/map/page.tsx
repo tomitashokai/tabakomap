@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import BottomNav from '@/components/BottomNav';
 import { supabase } from '@/lib/supabase';
@@ -43,9 +43,19 @@ const ABOVE_SHEET = `calc(${NAV_HEIGHT + SHEET_HEIGHT + CONTROL_GAP}px + env(saf
  */
 const MAP_PADDING = { top: TOP_CHROME, bottom: NAV_HEIGHT + SHEET_HEIGHT, left: 0, right: 0 };
 
+/**
+ * 施設名と住所のどちらに書かれていても引っかかるようにする。
+ * 「梅田」で探す人は施設名に入っているか住所に入っているかを区別していない
+ */
+function matchesQuery(spot: Spot, q: string): boolean {
+  return (
+    spot.name.toLowerCase().includes(q) || (spot.address?.toLowerCase().includes(q) ?? false)
+  );
+}
+
 export default function MapPage() {
   const [spots, setSpots] = useState<Spot[]>([]);
-  const [filtered, setFiltered] = useState<Spot[]>([]);
+  const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<SpotType | 'all'>('all');
   // 既定では誰でも立ち寄れる場所だけを出す。「店舗利用者のみ」を混ぜると、
   // 行っても吸えない場所が地図の大半を占めてしまう
@@ -62,10 +72,7 @@ export default function MapPage() {
       // 全件でも 100KB 程度なので今は素直に読む（他都市を足すなら表示範囲で絞ること）
       .limit(2000)
       .then(({ data }) => {
-        if (data) {
-          setSpots(data as Spot[]);
-          setFiltered(data as Spot[]);
-        }
+        if (data) setSpots(data as Spot[]);
       });
   }, []);
 
@@ -73,14 +80,41 @@ export default function MapPage() {
   // 「誰でも利用可だけ」が効くのは「すべて」と「喫煙所」
   const patronageImplied = activeFilter !== 'all' && STORE_TYPES.has(activeFilter);
 
-  useEffect(() => {
+  const normalizedQuery = query.trim().toLowerCase();
+  const searching = normalizedQuery.length > 0;
+
+  /**
+   * 派生値なので useState + useEffect にしない。
+   * 効果の中で setState すると描画が二度走るうえ、spots の到着と
+   * フィルターの変更で一瞬だけ古い一覧が出る
+   */
+  const filtered = useMemo(() => {
     let list = spots;
     if (activeFilter !== 'all') list = list.filter((s) => s.type === activeFilter);
-    if (!showRestricted && !(activeFilter !== 'all' && STORE_TYPES.has(activeFilter))) {
+
+    /*
+     * 検索中は利用条件つきも対象にする。名前で名指しして探している人に「0件」を
+     * 返すと、その場所が DB にあるのに壊れているように見える。条件はカードと
+     * 詳細に出るので、行っても吸えない場所へ黙って案内することにはならない
+     */
+    if (!showRestricted && !patronageImplied && !searching) {
       list = list.filter(isOpenToAll);
     }
-    setFiltered(list);
-  }, [activeFilter, showRestricted, spots]);
+
+    if (searching) list = list.filter((s) => matchesQuery(s, normalizedQuery));
+    return list;
+  }, [spots, activeFilter, showRestricted, patronageImplied, searching, normalizedQuery]);
+
+  /**
+   * 検索中は先頭の一致に地図を寄せる。件数だけ変えても、
+   * 目的の場所が画面の外にあったままでは探せたことにならない。
+   * useMemo で包むのは、毎描画で新しい配列を渡すと MapView が easeTo を撃ち続けるため
+   */
+  const searchTarget = searching ? filtered[0] ?? null : null;
+  const mapCenter = useMemo<[number, number] | undefined>(
+    () => (searchTarget ? [searchTarget.lng, searchTarget.lat] : userLocation ?? undefined),
+    [searchTarget, userLocation]
+  );
 
   /**
    * 選択中の種別のうち、利用条件つきの件数。
@@ -107,7 +141,7 @@ export default function MapPage() {
       <div style={{ flex: 1, position: 'relative' }}>
         <MapView
           spots={filtered}
-          center={userLocation ?? undefined}
+          center={mapCenter}
           onSpotClick={setSelectedSpot}
           padding={MAP_PADDING}
         />
@@ -122,20 +156,47 @@ export default function MapPage() {
             zIndex: 10,
           }}
         >
-          <input
-            type="text"
-            placeholder="🔍  場所・銘柄で検索..."
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              borderRadius: 14,
-              border: 'none',
-              background: 'white',
-              fontSize: 15,
-              boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-              outline: 'none',
-            }}
-          />
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="🔍  施設名・住所で検索..."
+              aria-label="施設名・住所で検索"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                paddingRight: searching ? 44 : 16,
+                borderRadius: 14,
+                border: 'none',
+                background: 'white',
+                fontSize: 15,
+                boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                outline: 'none',
+              }}
+            />
+            {searching && (
+              <button
+                onClick={() => setQuery('')}
+                aria-label="検索をクリア"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  bottom: 0,
+                  right: 6,
+                  width: 32,
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#aaa',
+                  fontSize: 18,
+                  cursor: 'pointer',
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter chips */}
@@ -263,10 +324,22 @@ export default function MapPage() {
                 gap: 8,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>
-                近くのスポット ({filtered.length}件)
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#888',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {searching
+                  ? `「${query.trim()}」の検索結果 (${filtered.length}件)`
+                  : `近くのスポット (${filtered.length}件)`}
               </span>
-              {restrictedCount > 0 && (
+              {/* 検索中は条件つきも既に対象なので、トグルを出すと押しても何も変わらない */}
+              {!searching && restrictedCount > 0 && (
                 <button
                   onClick={() => setShowRestricted((v) => !v)}
                   style={{
@@ -341,9 +414,13 @@ export default function MapPage() {
                 ))}
                 {filtered.length === 0 && (
                   <div style={{ color: '#aaa', fontSize: 14, padding: '8px 0', lineHeight: 1.7 }}>
-                    {restrictedCount > 0
-                      ? '誰でも利用できる場所はありません。右上から店舗利用者向けの場所も表示できます。'
-                      : 'スポットがありません'}
+                    {searching
+                      ? `「${query.trim()}」に一致する場所はありません。${
+                          activeFilter === 'all' ? '' : '種別の絞り込みを外すと見つかることがあります。'
+                        }`
+                      : restrictedCount > 0
+                        ? '誰でも利用できる場所はありません。右上から店舗利用者向けの場所も表示できます。'
+                        : 'スポットがありません'}
                   </div>
                 )}
               </div>

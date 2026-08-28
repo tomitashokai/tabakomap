@@ -15,8 +15,8 @@ Next.js 16 (App Router) / TypeScript / Tailwind CSS / Mapbox GL JS / Supabase (P
 npx next dev        # 開発サーバー
 npx tsc --noEmit    # 型チェック
 npx next build      # 本番ビルド
-npx eslint src      # ※ brands/page.tsx と map/page.tsx に set-state-in-effect の
-                    #   既存エラーが2件ある。新規に増やさないこと
+npx eslint src      # エラー0・警告0。増やさないこと（一覧の絞り込みは useEffect + setState
+                    # ではなく useMemo の派生値で書く。前者は set-state-in-effect で落ちる）
 ```
 
 ## 環境変数
@@ -106,6 +106,7 @@ body: {"query": "<SQL>"}
 - `scripts/import-brands.mjs` / `scripts/brands-seed.json` — 銘柄マスタ
 - `scripts/gen-icons.mjs` — 依存なしの PWA アイコン生成
 - `scripts/screenshot.mjs` — 実 Chrome での目視検証。`--click` は複数指定可、`--center lat,lng`、
+  `--type <文字列>` で最初の input に打ち込める（検索欄の検証用。`--click` より先に走る）、
   `SCREENSHOT_BASE_URL` で本番も撮れる。**ローカル(Windows) 専用**：クラウドでは
   `.puppeteerrc.cjs` が `skipDownload: true` のため実 Chrome が無く動かない
 
@@ -133,6 +134,10 @@ mapnavi リンクの URL（`mpx=` `mpy=`）から取れる。パースはレコ�
   あって入れる人の制限ではない）、記載なし
 - カフェ・バー・飲食店・購入・シーシャ・葉巻を選んだときは店舗利用が前提なので条件つきも出す
   （`STORE_TYPES`）。これが無いと「飲食店」を選んだ瞬間 0 件で行き止まりになる
+- **検索中も条件つきを対象にする。** 「トヨタ」で探すと該当13件は全部「店舗利用者のみ」で、
+  既定の絞り込みを掛けたままだと 0 件になり、DB にあるのに壊れているように見える。
+  名指しで探す行為は「browse」ではなく「lookup」なので通す。条件はカードと詳細に
+  出るので誤誘導にはならない
 
 ### マップの重なりは定数から計算する
 BottomNav は fixed / zIndex 100 / 高さ 72。近くのスポットのシート（zIndex 20 / 高さ 220）は

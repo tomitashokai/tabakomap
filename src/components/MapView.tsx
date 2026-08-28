@@ -51,6 +51,9 @@ export default function MapView({ spots, center, onSpotClick, padding }: Props) 
       map.remove();
       mapRef.current = null;
     };
+    // center は初期表示位置として一度だけ読む。以降の移動は下の easeTo の効果が受け持つ。
+    // ここに center を入れると、検索で中心が変わるたびに地図を作り直してしまう
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 余白を入れておくと、以降の easeTo が「UI に隠れていない部分」の中心に寄せてくれる

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { supabase } from '@/lib/supabase';
@@ -42,7 +42,6 @@ function byCategoryThenName(a: Brand, b: Brand): number {
 
 export default function BrandsPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [filtered, setFiltered] = useState<Brand[]>([]);
   const [activeCat, setActiveCat] = useState<BrandCategory | 'all'>('all');
   const [query, setQuery] = useState('');
 
@@ -54,20 +53,17 @@ export default function BrandsPage() {
       .select('*')
       .limit(200)
       .then(({ data }) => {
-        if (data) {
-          const sorted = (data as Brand[]).sort(byCategoryThenName);
-          setBrands(sorted);
-          setFiltered(sorted);
-        }
+        if (data) setBrands((data as Brand[]).sort(byCategoryThenName));
       });
   }, []);
 
-  useEffect(() => {
+  /** 派生値なので効果の中で setState しない（描画が二度走り、一瞬だけ古い一覧が出る） */
+  const filtered = useMemo(() => {
     let list = brands;
     if (activeCat !== 'all') list = list.filter((b) => b.category === activeCat);
     if (query) list = list.filter((b) => b.name.includes(query) || b.maker?.includes(query));
-    setFiltered(list);
-  }, [activeCat, query, brands]);
+    return list;
+  }, [brands, activeCat, query]);
 
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -135,7 +131,9 @@ export default function BrandsPage() {
         {filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🚬</div>
-            <div style={{ fontSize: 14 }}>銘柄がありません</div>
+            <div style={{ fontSize: 14 }}>
+              {query.trim() ? `「${query.trim()}」に一致する銘柄はありません` : '銘柄がありません'}
+            </div>
           </div>
         ) : (
           <div style={{ padding: '12px 12px 0' }}>
