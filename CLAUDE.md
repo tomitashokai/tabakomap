@@ -105,6 +105,11 @@ body: {"query": "<SQL>"}
   同名かつ座標が近い既存行は上書きするので何度流しても増えない
 - `scripts/import-brands.mjs` / `scripts/brands-seed.json` — 銘柄マスタ
 - `scripts/gen-icons.mjs` — 依存なしの PWA アイコン生成
+- `scripts/smoke.mjs` — 実 Chrome で主要操作を通しで踏む回帰確認。別ターミナルで
+  `npx next start -p 3100` を上げてから `node scripts/smoke.mjs`。一度壊れていた
+  3点（検索欄が飾り／登録に現在地が入らない／詳細シートの誤警告）を踏み直す。
+  スポット名で DOM を引くので、元データから該当スポットが消えたら名前を差し替える。
+  **ローカル(Windows) 専用**
 - `scripts/screenshot.mjs` — 実 Chrome での目視検証。`--click` は複数指定可、`--center lat,lng`、
   `--type <文字列>` で最初の input に打ち込める（検索欄の検証用。`--click` より先に走る）、
   `SCREENSHOT_BASE_URL` で本番も撮れる。**ローカル(Windows) 専用**：クラウドでは
