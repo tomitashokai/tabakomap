@@ -9,12 +9,16 @@ import { fetchSpotsByUser } from '@/lib/spots';
 
 const EMPTY_STATS: CheckinStats = { total: 0, spots: 0, thisMonth: 0 };
 
+/**
+ * href の無い項目は未実装。矢印つきで押せるように見せて無反応だと、
+ * 壊れているのか自分の操作ミスか分からないので「準備中」と出して押せない見た目にする
+ */
 const MENU: { icon: string; label: string; href?: string }[] = [
   { icon: '❤️', label: 'お気に入りスポット' },
   { icon: '📍', label: '投稿したスポット', href: '/mypage/spots' },
   { icon: '⚙️', label: '設定' },
   { icon: '📚', label: 'データの出典', href: '/about/data' },
-  { icon: '📖', label: '利用規約' },
+  { icon: '📖', label: '利用規約', href: '/about/terms' },
   { icon: '🔒', label: 'プライバシーポリシー', href: '/about/privacy' },
 ];
 
@@ -152,12 +156,29 @@ export default function MyPage() {
           {MENU.map((item, i) => {
             const row = (
               <>
-                <span style={{ fontSize: 20 }}>{item.icon}</span>
-                <span style={{ fontSize: 15, fontWeight: 500 }}>{item.label}</span>
+                <span style={{ fontSize: 20, opacity: item.href ? 1 : 0.4 }}>{item.icon}</span>
+                <span style={{ fontSize: 15, fontWeight: 500, color: item.href ? 'inherit' : '#aaa' }}>
+                  {item.label}
+                </span>
                 {item.label === '投稿したスポット' && postedCount > 0 && (
                   <span style={{ fontSize: 13, color: '#888', marginLeft: 6 }}>{postedCount}</span>
                 )}
-                <span style={{ marginLeft: 'auto', color: '#ccc' }}>›</span>
+                {item.href ? (
+                  <span style={{ marginLeft: 'auto', color: '#ccc' }}>›</span>
+                ) : (
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: 11,
+                      color: '#aaa',
+                      background: '#f5f5f5',
+                      borderRadius: 10,
+                      padding: '3px 8px',
+                    }}
+                  >
+                    準備中
+                  </span>
+                )}
               </>
             );
             const style: React.CSSProperties = {
@@ -166,7 +187,7 @@ export default function MyPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
-              cursor: 'pointer',
+              cursor: item.href ? 'pointer' : 'default',
               color: 'inherit',
               textDecoration: 'none',
             };
