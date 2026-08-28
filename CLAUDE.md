@@ -28,6 +28,11 @@ npx eslint src      # ※ brands/page.tsx と map/page.tsx に set-state-in-effe
 （自分のアクセスが本番の数値に混ざる）。**ローカル検証だけならダミー値で足りる。**
 `NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co` などを渡せば `next build` は
 コンパイルと型チェックを通過し、dev サーバーも起動して DB を見ないページは検証できる。
+ただし DB を読むページのプリレンダーはそこで落ちるので、実データの検証にはならない。
+
+**`.env.local` を無くしても本番から復元できる。** anon key と Mapbox トークンは
+`next build` でクライアントバンドルに埋め込まれるので、本番の `/_next/static/.../*.js` を
+落として `sb_publishable_` と `pk.eyJ` を拾えばよい（どちらも公開前提の値）。
 
 **秘密情報をコマンドラインに直接書かないこと。** 許可したコマンドは文字列のまま
 `.claude/settings.local.json` に保存されるため平文で残る。ファイルか環境変数から読ませる。
@@ -179,5 +184,7 @@ fetch はデフォルトでキャッシュされないので ISR は `next: { re
 - **GA / Speed Insights はコードは入ったが計測は始まっていない。** ダッシュボード側の
   作業が3つ残っている：GA4 プロパティを作って測定 ID を取る、Vercel の環境変数に
   `NEXT_PUBLIC_GA_ID` を設定する、Vercel で Speed Insights を有効化する
-- `/about/privacy` に事業者名と問い合わせ先の記載が無い。決めたら追記する
+- `/about/privacy` に事業者名と問い合わせ先の記載が無いまま公開している。氏名・メールを
+  取得していないので開示請求の窓口は要らないという判断。会社アドレスは勤務先に紐づくため
+  載せない。**問い合わせフォームを作ったら、その URL を追記する**
 - マイページの「利用規約」「設定」「お気に入りスポット」はメニュー項目だけでリンク先が無い
