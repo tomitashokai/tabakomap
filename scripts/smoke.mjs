@@ -7,6 +7,11 @@
  *
  * ここで見ているのは「一度壊れていた」ものばかり。検索欄が飾りだった、登録に
  * 現在地が入らなかった、詳細シートが誤った警告を出していた、の3つを踏み直す。
+ * お気に入りは新機能だが、★・一覧・解除が3ファイルに分かれていて手で追うと漏れるので入れた。
+ *
+ * **お気に入りの項目だけは DB に書き込む。** 付けて一覧で確認して解除するので、
+ * 通り抜ければ行は残らない。途中で落ちたときは匿名ユーザーの favorites が1行残る
+ * （本人しか読めないので他のユーザーには影響しない）。本番に当てるときはこれを承知で。
  *
  * スポット名で DOM を引くので、元データから該当スポットが消えると NG になる。
  * その場合は名前を差し替えること（データが変わっただけで、機能の退行ではない）。
@@ -64,6 +69,15 @@ const clickButton = (label) =>
     label
   );
 
+/** aria-label 完全一致で押す。disabled のまま押して「押した」と誤認しないよう見ておく */
+const clickByLabel = (label) =>
+  page.evaluate((l) => {
+    const el = document.querySelector(`[aria-label="${l}"]`);
+    if (!el || el.disabled) return false;
+    el.click();
+    return true;
+  }, label);
+
 const clickMarker = (name) =>
   page.evaluate((n) => {
     const el = document.querySelector(`[title="${n}"]`);
@@ -105,6 +119,30 @@ await wait(2500);
 t = await text();
 check(`${RESTRICTED_SPOT} のピンがある`, found);
 check(`${RESTRICTED_SPOT} に入場制限の警告が出る`, t.includes('誰でも自由に立ち寄れる場所ではない'));
+
+// --- お気に入り（付ける → 一覧に出る → 解除する） -------------------------
+// ここだけ DB に書き込む。最後に解除して元に戻す
+await openMap();
+await clickMarker(OPEN_SPOT);
+await wait(2000);
+// ★ は現在の状態を DB に問い合わせるまで disabled なので、押せること自体を見る
+check('★ が押せる状態になる', await clickByLabel('お気に入りに追加'));
+await wait(2000);
+check(
+  '★ を押すと保存済みの表示に変わる',
+  await page.evaluate(() => !!document.querySelector('[aria-label="お気に入りから外す"]'))
+);
+
+await page.goto(`${BASE}/mypage/favorites`, { waitUntil: 'networkidle2', timeout: 60000 });
+await wait(3000);
+t = await text();
+check('お気に入り一覧に保存したスポットが出る', t.includes(OPEN_SPOT));
+check('一覧に「準備中」が残っていない', !t.includes('準備中'));
+
+check('一覧から解除できる', await clickByLabel(`${OPEN_SPOT}をお気に入りから外す`));
+await wait(2000);
+t = await text();
+check('解除すると一覧から消える', !t.includes(OPEN_SPOT));
 
 // --- 登録モーダルが自分で現在地を取る ------------------------------------
 await openMap();

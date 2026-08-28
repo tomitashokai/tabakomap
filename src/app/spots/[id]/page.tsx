@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
+import FavoriteButton from '@/components/FavoriteButton';
 import { fetchSpotById } from '@/lib/spots';
 import { SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS, isOpenToAll } from '@/lib/types';
 import { extractWard } from '@/lib/areas';
@@ -106,6 +107,11 @@ export default async function SpotPage({ params }: Props) {
           >
             🗺 地図で見る
           </Link>
+        </div>
+
+        {/* ページ本体は revalidate 付きの静的生成のまま。★だけクライアントに切り出す */}
+        <div style={{ marginTop: 10 }}>
+          <FavoriteButton spotId={spot.id} variant="outline" />
         </div>
 
         {ward && (

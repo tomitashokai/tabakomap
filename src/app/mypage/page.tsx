@@ -5,17 +5,21 @@ import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { useAuth } from '@/components/AuthProvider';
 import { fetchUserCheckinStats, type CheckinStats } from '@/lib/checkins';
+import { fetchFavoriteCount } from '@/lib/favorites';
 import { fetchSpotsByUser } from '@/lib/spots';
 
 const EMPTY_STATS: CheckinStats = { total: 0, spots: 0, thisMonth: 0 };
 
 /**
  * href の無い項目は未実装。矢印つきで押せるように見せて無反応だと、
- * 壊れているのか自分の操作ミスか分からないので「準備中」と出して押せない見た目にする
+ * 壊れているのか自分の操作ミスか分からないので「準備中」と出して押せない見た目にする。
+ *
+ * count は行の右に件数を出すための参照先。0 件のときは出さない
+ * （「0」を出すと、まだ何もしていないのか読み込めていないのか分からない）
  */
-const MENU: { icon: string; label: string; href?: string }[] = [
-  { icon: '❤️', label: 'お気に入りスポット' },
-  { icon: '📍', label: '投稿したスポット', href: '/mypage/spots' },
+const MENU: { icon: string; label: string; href?: string; count?: 'favorites' | 'posted' }[] = [
+  { icon: '⭐', label: 'お気に入りスポット', href: '/mypage/favorites', count: 'favorites' },
+  { icon: '📍', label: '投稿したスポット', href: '/mypage/spots', count: 'posted' },
   { icon: '⚙️', label: '設定' },
   { icon: '📚', label: 'データの出典', href: '/about/data' },
   { icon: '📖', label: '利用規約', href: '/about/terms' },
@@ -26,6 +30,7 @@ export default function MyPage() {
   const { user, loading: authLoading, isAnonymous } = useAuth();
   const [stats, setStats] = useState<CheckinStats>(EMPTY_STATS);
   const [postedCount, setPostedCount] = useState(0);
+  const [favoriteCount, setFavoriteCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +48,11 @@ export default function MyPage() {
       setPostedCount(list.length);
     });
 
+    fetchFavoriteCount(user.id).then((n) => {
+      if (!active) return;
+      setFavoriteCount(n);
+    });
+
     return () => {
       active = false;
     };
@@ -52,6 +62,8 @@ export default function MyPage() {
   const goal = (Math.floor(stats.total / 10) + 1) * 10;
   const progress = (stats.total / goal) * 100;
   const busy = authLoading || loading;
+
+  const menuCounts = { favorites: favoriteCount, posted: postedCount };
 
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -160,8 +172,10 @@ export default function MyPage() {
                 <span style={{ fontSize: 15, fontWeight: 500, color: item.href ? 'inherit' : '#aaa' }}>
                   {item.label}
                 </span>
-                {item.label === '投稿したスポット' && postedCount > 0 && (
-                  <span style={{ fontSize: 13, color: '#888', marginLeft: 6 }}>{postedCount}</span>
+                {item.count && menuCounts[item.count] > 0 && (
+                  <span style={{ fontSize: 13, color: '#888', marginLeft: 6 }}>
+                    {menuCounts[item.count]}
+                  </span>
                 )}
                 {item.href ? (
                   <span style={{ marginLeft: 'auto', color: '#ccc' }}>›</span>
