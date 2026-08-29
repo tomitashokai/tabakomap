@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS, isOpenToAll } from '@/lib/types';
 import { useAuth } from '@/components/AuthProvider';
+import FavoriteButton from '@/components/FavoriteButton';
 import { createCheckin, fetchSpotCheckinCount, hasCheckedInToday } from '@/lib/checkins';
 
 interface Props {
@@ -136,6 +137,10 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
           }}
         >
           {SPOT_TYPE_EMOJIS[spot.type as SpotType]}
+          {/* ヒーローの右上。下部はバッジ行が右端まで伸びうるので、重ならない位置に置く */}
+          <div style={{ position: 'absolute', top: 12, right: 12 }}>
+            <FavoriteButton spotId={spot.id} variant="overlay" />
+          </div>
           <div style={{ position: 'absolute', bottom: 12, left: 16, right: 16 }}>
             <div style={{ color: 'white', fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
               {spot.name}

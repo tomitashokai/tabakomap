@@ -71,6 +71,15 @@ npx eslint src      # エラー0・警告0。増やさないこと（一覧の�
 ### `checkins`（0件）
 `id, spot_id, user_id, created_at`
 
+### `favorites`（0件）
+`id, spot_id, user_id, created_at`
+- `unique (user_id, spot_id)`。トグルなので同じ組が2行入ると、解除しても片方が残って
+  「消えない」ように見える。アプリ側の判定に頼らず DB で保証している
+- 複合インデックス `favorites_user_created_idx (user_id, created_at desc)`。
+  一覧は「自分の分を新しい順」でしか引かない
+- **`checkins` と違って select も本人のみ。** anon key で「どの匿名ユーザーが
+  どの喫煙所を保存したか」を全件引ける状態を作らないため
+
 ### `brands`（86件）
 `id, name, maker, category, tar, nicotine, price, availability, image_url, created_at`
 - `name` に unique 制約 `brands_name_key`
@@ -105,11 +114,18 @@ body: {"query": "<SQL>"}
   同名かつ座標が近い既存行は上書きするので何度流しても増えない
 - `scripts/import-brands.mjs` / `scripts/brands-seed.json` — 銘柄マスタ
 - `scripts/gen-icons.mjs` — 依存なしの PWA アイコン生成
-- `scripts/smoke.mjs` — 実 Chrome で主要操作を通しで踏む回帰確認。別ターミナルで
+- `scripts/smoke.mjs` — 実 Chrome で主要操作を通しで踏む回帰確認（18項目）。別ターミナルで
   `npx next start -p 3100` を上げてから `node scripts/smoke.mjs`。一度壊れていた
-  3点（検索欄が飾り／登録に現在地が入らない／詳細シートの誤警告）を踏み直す。
-  スポット名で DOM を引くので、元データから該当スポットが消えたら名前を差し替える。
-  **ローカル(Windows) 専用**
+  3点（検索欄が飾り／登録に現在地が入らない／詳細シートの誤警告）と、お気に入りの
+  付ける→一覧→解除を踏み直す。**お気に入りの項目だけ DB に書き込む**（通り抜ければ
+  行は残らない）。スポット名で DOM を引くので、元データから該当スポットが消えたら
+  名前を差し替える。**ローカル(Windows) 専用**
+  - **待つときは `waitFor` を使う。固定の `wait(ms)` を足さないこと。**
+    `next start` 直後のコールドランは spots 435件の取得と435個のマーカー描画が
+    2秒に収まらず、実装が正しいのに NG になる。実際にドーチカの条件補足が1回だけ落ちた
+  - **ピンを押すときは `openSheet()` を使い、戻り値を必ず `check` する。**
+    `clickMarker` の戻り値を捨てると、ピンが消えていてもシートが遅れただけでも
+    「文字が無い」NG になって区別がつかない
 - `scripts/screenshot.mjs` — 実 Chrome での目視検証。`--click` は複数指定可、`--center lat,lng`、
   `--type <文字列>` で最初の input に打ち込める（検索欄の検証用。`--click` より先に走る）、
   `SCREENSHOT_BASE_URL` で本番も撮れる。**ローカル(Windows) 専用**：クラウドでは
@@ -238,8 +254,8 @@ fetch はデフォルトでキャッシュされないので ISR は `next: { re
 - 銘柄データの価格49件が null。**後述の落とし穴「価格は改定が続いている」を読んでから着手すること**
 - 喫煙可能店の種別は店名からの推測。業態が読めない店は restaurant に寄っている
   （`scripts/import-osaka-shops.mjs` の `TYPE_RULES` で調整可能）
-- お気に入りスポットと設定はマイページに項目だけあり「準備中」と出している。
-  お気に入りは `favorites` テーブルと RLS から要る。Osaka Metro の喫煙所データも未着手
+- マイページの「設定」は項目だけあり「準備中」と出している（お気に入りは実装済み）
+- Osaka Metro の喫煙所データは未着手
 - マップの spots 取得は全件読み（limit 2000）。他都市を足すなら表示範囲で絞ること
 - 検証用に作った匿名ユーザーが `auth.users` に残っている
 - **GA / Speed Insights はコードは入ったが計測は始まっていない。** ダッシュボード側の
@@ -248,4 +264,4 @@ fetch はデフォルトでキャッシュされないので ISR は `next: { re
 - `/about/privacy` に事業者名と問い合わせ先の記載が無いまま公開している。氏名・メールを
   取得していないので開示請求の窓口は要らないという判断。会社アドレスは勤務先に紐づくため
   載せない。**問い合わせフォームを作ったら、その URL を追記する**
-- マイページの「利用規約」「設定」「お気に入りスポット」はメニュー項目だけでリンク先が無い
+- マイページの「設定」はメニュー項目だけでリンク先が無い
