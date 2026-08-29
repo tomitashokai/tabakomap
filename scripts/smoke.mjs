@@ -86,6 +86,36 @@ const clickMarker = (name) =>
     return true;
   }, name);
 
+/**
+ * 条件が満たされるまで待つ。固定の sleep で待つと、`next start` 直後のコールドランでは
+ * spots 435件の取得と 435個のマーカーの描画が2秒に収まらず、実装が正しいのに NG になる。
+ * 実際にそれでドーチカの条件補足が1回だけ落ち、再実行では通った
+ */
+async function waitFor(fn, { timeout = 20000, interval = 250 } = {}) {
+  const limit = Date.now() + timeout;
+  for (;;) {
+    if (await fn()) return true;
+    if (Date.now() >= limit) return false;
+    await wait(interval);
+  }
+}
+
+/** シートが開いた印。利用条件やチェックイン数と違い、スポットに関わらず必ず出る */
+const SHEET_MARK = 'この場所の詳細ページを開く';
+
+/**
+ * ピンを押して詳細シートが開くまで待つ。**戻り値は必ず check すること。**
+ * 捨てると、ピンが消えていても・シートが開くのが遅れただけでも「文字が無い」NG に
+ * なって区別がつかない。以前ドーチカ側だけ戻り値を見ておらず、原因の切り分けに
+ * 計測用スクリプトを書く必要が出た
+ */
+async function openSheet(name) {
+  if (!(await clickMarker(name))) return false;
+  return waitFor(() =>
+    page.evaluate((mark) => document.body.innerText.includes(mark), SHEET_MARK)
+  );
+}
+
 // --- 検索 ---------------------------------------------------------------
 await openMap();
 const beforeSearch = (await text()).match(/近くのスポット \((\d+)件\)/)?.[1];
@@ -105,8 +135,7 @@ t = await text();
 check('× で検索前の状態に戻る', t.includes(`近くのスポット (${beforeSearch}件)`));
 
 // --- 詳細シートの利用条件 ------------------------------------------------
-await clickMarker(OPEN_SPOT);
-await wait(2000);
+check(`${OPEN_SPOT} のシートが開く`, await openSheet(OPEN_SPOT));
 t = await text();
 check(`${OPEN_SPOT} に入場制限の誤警告が出ない`, !t.includes('誰でも自由に立ち寄れる場所ではない'));
 check(`${OPEN_SPOT} に条件の補足が出る`, t.includes('通りがかれば誰でも該当します'));
@@ -114,23 +143,25 @@ check(`${OPEN_SPOT} に条件の補足が出る`, t.includes('通りがかれば
 await openMap();
 await clickButton('店舗利用者のみも表示');
 await wait(2500);
-const found = await clickMarker(RESTRICTED_SPOT);
-await wait(2500);
+const found = await openSheet(RESTRICTED_SPOT);
 t = await text();
-check(`${RESTRICTED_SPOT} のピンがある`, found);
+check(`${RESTRICTED_SPOT} のシートが開く`, found);
 check(`${RESTRICTED_SPOT} に入場制限の警告が出る`, t.includes('誰でも自由に立ち寄れる場所ではない'));
 
 // --- お気に入り（付ける → 一覧に出る → 解除する） -------------------------
 // ここだけ DB に書き込む。最後に解除して元に戻す
 await openMap();
-await clickMarker(OPEN_SPOT);
-await wait(2000);
-// ★ は現在の状態を DB に問い合わせるまで disabled なので、押せること自体を見る
-check('★ が押せる状態になる', await clickByLabel('お気に入りに追加'));
-await wait(2000);
+await openSheet(OPEN_SPOT);
+// ★ は現在の状態を DB に問い合わせるまで disabled。押せるようになるまで待ってから押す
+check(
+  '★ が押せる状態になる',
+  await waitFor(() => clickByLabel('お気に入りに追加'))
+);
 check(
   '★ を押すと保存済みの表示に変わる',
-  await page.evaluate(() => !!document.querySelector('[aria-label="お気に入りから外す"]'))
+  await waitFor(() =>
+    page.evaluate(() => !!document.querySelector('[aria-label="お気に入りから外す"]'))
+  )
 );
 
 await page.goto(`${BASE}/mypage/favorites`, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -139,10 +170,14 @@ t = await text();
 check('お気に入り一覧に保存したスポットが出る', t.includes(OPEN_SPOT));
 check('一覧に「準備中」が残っていない', !t.includes('準備中'));
 
-check('一覧から解除できる', await clickByLabel(`${OPEN_SPOT}をお気に入りから外す`));
-await wait(2000);
-t = await text();
-check('解除すると一覧から消える', !t.includes(OPEN_SPOT));
+check(
+  '一覧から解除できる',
+  await waitFor(() => clickByLabel(`${OPEN_SPOT}をお気に入りから外す`))
+);
+check(
+  '解除すると一覧から消える',
+  await waitFor(() => page.evaluate((n) => !document.body.innerText.includes(n), OPEN_SPOT))
+);
 
 // --- 登録モーダルが自分で現在地を取る ------------------------------------
 await openMap();
