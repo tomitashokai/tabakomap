@@ -10,7 +10,7 @@ import { fetchSpotsByUser } from '@/lib/spots';
 const EMPTY_STATS: CheckinStats = { total: 0, spots: 0, thisMonth: 0 };
 
 const MENU: { icon: string; label: string; href?: string }[] = [
-  { icon: '❤️', label: 'お気に入りスポット' },
+  { icon: '❤️', label: 'お気に入りスポット', href: '/mypage/favorites' },
   { icon: '📍', label: '投稿したスポット', href: '/mypage/spots' },
   { icon: '⚙️', label: '設定' },
   { icon: '📚', label: 'データの出典', href: '/about/data' },

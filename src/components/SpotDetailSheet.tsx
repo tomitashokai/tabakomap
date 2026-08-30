@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS } from '@/lib/types';
 import { useAuth } from '@/components/AuthProvider';
 import { createCheckin, fetchSpotCheckinCount, hasCheckedInToday } from '@/lib/checkins';
+import { addFavorite, isFavorited, removeFavorite } from '@/lib/favorites';
 
 interface Props {
   spot: Spot;
@@ -17,6 +18,8 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
   const [count, setCount] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [favorited, setFavorited] = useState(false);
+  const [favBusy, setFavBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -29,12 +32,31 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
       hasCheckedInToday(spot.id, user.id).then((done) => {
         if (active) setCheckinDone(done);
       });
+      isFavorited(spot.id, user.id).then((fav) => {
+        if (active) setFavorited(fav);
+      });
     }
 
     return () => {
       active = false;
     };
   }, [spot.id, user]);
+
+  const handleToggleFavorite = async () => {
+    if (!user || favBusy) return;
+    setFavBusy(true);
+    setError(null);
+
+    // 先に見た目を返してから確定させる。失敗したら元に戻す
+    const next = !favorited;
+    setFavorited(next);
+    const ok = next ? await addFavorite(spot.id, user.id) : await removeFavorite(spot.id, user.id);
+    if (!ok) {
+      setFavorited(!next);
+      setError('お気に入りを更新できませんでした。');
+    }
+    setFavBusy(false);
+  };
 
   const handleCheckin = async () => {
     if (!user || saving || checkinDone) return;
@@ -117,6 +139,29 @@ export default function SpotDetailSheet({ spot, onClose }: Props) {
           }}
         >
           {SPOT_TYPE_EMOJIS[spot.type as SpotType]}
+          <button
+            onClick={handleToggleFavorite}
+            disabled={!user || favBusy}
+            aria-pressed={favorited}
+            aria-label={favorited ? 'お気に入りから外す' : 'お気に入りに追加'}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              border: 'none',
+              background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(4px)',
+              fontSize: 20,
+              lineHeight: 1,
+              cursor: !user || favBusy ? 'default' : 'pointer',
+              opacity: user ? 1 : 0.4,
+            }}
+          >
+            {favorited ? '❤️' : '🤍'}
+          </button>
           <div style={{ position: 'absolute', bottom: 12, left: 16, right: 16 }}>
             <div style={{ color: 'white', fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
               {spot.name}
