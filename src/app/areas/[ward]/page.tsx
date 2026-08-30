@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
-import { fetchAllSpots } from '@/lib/spots';
-import { groupByWard } from '@/lib/areas';
+import { fetchSpotsByWard } from '@/lib/spots';
+import { extractWard } from '@/lib/areas';
 import { SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS, isOpenToAll } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -26,9 +26,9 @@ export default async function WardPage({ params }: Props) {
   const { ward } = await params;
   const name = decodeURIComponent(ward);
 
-  const spots = await fetchAllSpots();
-  const group = groupByWard(spots).find((g) => g.ward === name);
-  if (!group) notFound();
+  // ilike は「西区」が「西成区」にも当たるので、抜き出した区名の完全一致で絞り直す
+  const spots = (await fetchSpotsByWard(name)).filter((s) => extractWard(s.address) === name);
+  if (spots.length === 0) notFound();
 
   return (
     <div style={{ minHeight: '100dvh', background: '#f5f5f5', paddingBottom: 88 }}>
@@ -39,11 +39,11 @@ export default async function WardPage({ params }: Props) {
         <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>
           大阪市{name}の喫煙所・喫煙可能店
         </h1>
-        <p style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{group.spots.length}件</p>
+        <p style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{spots.length}件</p>
       </div>
 
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {group.spots.map((spot) => {
+        {spots.map((spot) => {
           const restricted = !!spot.usage_condition && !isOpenToAll(spot);
           return (
             <Link

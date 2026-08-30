@@ -9,10 +9,11 @@ import { fetchSpotsByUser } from '@/lib/spots';
 
 const EMPTY_STATS: CheckinStats = { total: 0, spots: 0, thisMonth: 0 };
 
-const MENU: { icon: string; label: string; href?: string }[] = [
+const MENU: { icon: string; label: string; href?: string; pending?: boolean }[] = [
   { icon: '❤️', label: 'お気に入りスポット', href: '/mypage/favorites' },
   { icon: '📍', label: '投稿したスポット', href: '/mypage/spots' },
-  { icon: '⚙️', label: '設定' },
+  // 中身がまだ無い。href を足すまでは「準備中」として押せない見た目にする
+  { icon: '⚙️', label: '設定', pending: true },
   { icon: '📚', label: 'データの出典', href: '/about/data' },
   { icon: '📖', label: '利用規約', href: '/about/terms' },
   { icon: '🔒', label: 'プライバシーポリシー', href: '/about/privacy' },
@@ -157,7 +158,11 @@ export default function MyPage() {
                 {item.label === '投稿したスポット' && postedCount > 0 && (
                   <span style={{ fontSize: 13, color: '#888', marginLeft: 6 }}>{postedCount}</span>
                 )}
-                <span style={{ marginLeft: 'auto', color: '#ccc' }}>›</span>
+                {item.pending ? (
+                  <span style={{ marginLeft: 'auto', fontSize: 12, color: '#bbb' }}>準備中</span>
+                ) : (
+                  <span style={{ marginLeft: 'auto', color: '#ccc' }}>›</span>
+                )}
               </>
             );
             const style: React.CSSProperties = {
@@ -166,8 +171,8 @@ export default function MyPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
-              cursor: 'pointer',
-              color: 'inherit',
+              cursor: item.pending ? 'default' : 'pointer',
+              color: item.pending ? '#bbb' : 'inherit',
               textDecoration: 'none',
             };
             return item.href ? (
