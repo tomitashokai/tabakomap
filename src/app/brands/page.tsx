@@ -28,6 +28,25 @@ const AVAIL_LABELS: Record<string, string> = {
   specialty: '専門店のみ',
 };
 
+/**
+ * name 昇順だけで並べるとシーシャのフレーバー名が先頭を占め、
+ * 探されることの多い紙巻きが下まで埋もれる。カテゴリを第一キーにする
+ */
+const CATEGORY_ORDER: BrandCategory[] = ['cigarette', 'heated', 'shisha', 'cigar', 'other'];
+
+function categoryRank(category: BrandCategory | null): number {
+  if (!category) return CATEGORY_ORDER.length;
+  const i = CATEGORY_ORDER.indexOf(category);
+  return i === -1 ? CATEGORY_ORDER.length : i;
+}
+
+/** カテゴリ順 → 同カテゴリ内は名前順。名前は日本語を含むので localeCompare で並べる */
+function sortBrands(list: Brand[]): Brand[] {
+  return [...list].sort(
+    (a, b) => categoryRank(a.category) - categoryRank(b.category) || a.name.localeCompare(b.name, 'ja'),
+  );
+}
+
 export default function BrandsPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [filtered, setFiltered] = useState<Brand[]>([]);
@@ -38,12 +57,12 @@ export default function BrandsPage() {
     supabase
       .from('brands')
       .select('*')
-      .order('name')
       .limit(200)
       .then(({ data }) => {
         if (data) {
-          setBrands(data as Brand[]);
-          setFiltered(data as Brand[]);
+          const sorted = sortBrands(data as Brand[]);
+          setBrands(sorted);
+          setFiltered(sorted);
         }
       });
   }, []);

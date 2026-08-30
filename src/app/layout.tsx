@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
 
@@ -50,6 +52,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja" className="h-full">
       <body className="h-full">
         <AuthProvider>{children}</AuthProvider>
+        {/* どちらも計測 ID が不要で、Vercel 上でだけ動く。ローカルでは何も送らない */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
