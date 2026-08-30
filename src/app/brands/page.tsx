@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import BottomNav from '@/components/BottomNav';
 import { supabase } from '@/lib/supabase';
 import { Brand, BrandCategory } from '@/lib/types';
@@ -49,7 +49,6 @@ function sortBrands(list: Brand[]): Brand[] {
 
 export default function BrandsPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [filtered, setFiltered] = useState<Brand[]>([]);
   const [activeCat, setActiveCat] = useState<BrandCategory | 'all'>('all');
   const [query, setQuery] = useState('');
 
@@ -59,19 +58,16 @@ export default function BrandsPage() {
       .select('*')
       .limit(200)
       .then(({ data }) => {
-        if (data) {
-          const sorted = sortBrands(data as Brand[]);
-          setBrands(sorted);
-          setFiltered(sorted);
-        }
+        if (data) setBrands(sortBrands(data as Brand[]));
       });
   }, []);
 
-  useEffect(() => {
+  // 絞り込み結果は取得済みの一覧から決まるので、state に持たずレンダー中に導出する
+  const filtered = useMemo(() => {
     let list = brands;
     if (activeCat !== 'all') list = list.filter((b) => b.category === activeCat);
     if (query) list = list.filter((b) => b.name.includes(query) || b.maker?.includes(query));
-    setFiltered(list);
+    return list;
   }, [activeCat, query, brands]);
 
   return (

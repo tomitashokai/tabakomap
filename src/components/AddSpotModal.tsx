@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { reverseGeocode } from '@/lib/geocode';
 import { useAuth } from '@/components/AuthProvider';
 import { Spot, SpotType, SPOT_TYPE_LABELS, SPOT_TYPE_EMOJIS } from '@/lib/types';
 
@@ -33,8 +34,30 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
   const [isHeated, setIsHeated] = useState(false);
   const [is24h, setIs24h] = useState(false);
   const [usageCondition, setUsageCondition] = useState<string | null>(null);
+  const [address, setAddress] = useState('');
+  // モーダルが開いている間 userLocation は変わらない（現在地ボタンはオーバーレイの裏）ので、
+  // 初期値で決めてしまい、あとは取得完了時に false にするだけにする
+  const [geocoding, setGeocoding] = useState(!!userLocation);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // 住所が無いとエリアページのどの区にも並ばないので、座標から下書きを作る。
+  // 引けなかったときは空欄のままにして、手入力に任せる
+  useEffect(() => {
+    if (!userLocation) return;
+    let active = true;
+
+    reverseGeocode(userLocation[1], userLocation[0]).then((found) => {
+      if (!active) return;
+      // 入力済みなら上書きしない
+      if (found) setAddress((prev) => prev || found);
+      setGeocoding(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [userLocation]);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -63,6 +86,7 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
         is_heated: isHeated,
         is_24h: is24h,
         usage_condition: usageCondition,
+        address: address.trim() || null,
         created_by: user.id,
       })
       .select()
@@ -129,6 +153,28 @@ export default function AddSpotModal({ userLocation, onClose, onAdded }: Props) 
               outline: 'none',
             }}
           />
+        </div>
+
+        {/* Address */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={labelStyle}>住所</div>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder={geocoding ? '現在地から取得中…' : '例：大阪市中央区心斎橋筋2丁目'}
+            style={{
+              width: '100%',
+              padding: '12px 14px',
+              border: '1.5px solid #e5e5e5',
+              borderRadius: 12,
+              fontSize: 15,
+              background: '#f9f9f9',
+              outline: 'none',
+            }}
+          />
+          <p style={{ fontSize: 11, color: '#aaa', marginTop: 6, lineHeight: 1.5 }}>
+            区が分かるように入れておくと、エリア別の一覧にも表示されます
+          </p>
         </div>
 
         {/* Type */}

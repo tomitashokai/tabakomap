@@ -15,8 +15,8 @@ Next.js 16 (App Router) / TypeScript / Tailwind CSS / Mapbox GL JS / Supabase (P
 npx next dev        # 開発サーバー
 npx tsc --noEmit    # 型チェック
 npx next build      # 本番ビルド
-npx eslint src      # ※ brands/page.tsx と map/page.tsx に set-state-in-effect の
-                    #   既存エラーが2件ある。新規に増やさないこと
+npx eslint src      # ※ MapView.tsx に exhaustive-deps の警告が1件残っている。
+                    #   エラーは0件なので、増やさないこと
 ```
 
 ## 環境変数

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import BottomNav from '@/components/BottomNav';
 import { supabase } from '@/lib/supabase';
@@ -54,7 +54,6 @@ function matchesQuery(spot: Spot, query: string): boolean {
 
 export default function MapPage() {
   const [spots, setSpots] = useState<Spot[]>([]);
-  const [filtered, setFiltered] = useState<Spot[]>([]);
   const [activeFilter, setActiveFilter] = useState<SpotType | 'all'>('all');
   // 既定では誰でも立ち寄れる場所だけを出す。「店舗利用者のみ」を混ぜると、
   // 行っても吸えない場所が地図の大半を占めてしまう
@@ -72,10 +71,7 @@ export default function MapPage() {
       // 全件でも 100KB 程度なので今は素直に読む（他都市を足すなら表示範囲で絞ること）
       .limit(2000)
       .then(({ data }) => {
-        if (data) {
-          setSpots(data as Spot[]);
-          setFiltered(data as Spot[]);
-        }
+        if (data) setSpots(data as Spot[]);
       });
   }, []);
 
@@ -83,15 +79,14 @@ export default function MapPage() {
   // 「誰でも利用可だけ」が効くのは「すべて」と「喫煙所」
   const patronageImplied = activeFilter !== 'all' && STORE_TYPES.has(activeFilter);
 
-  useEffect(() => {
+  // 絞り込み結果は取得済みの一覧と操作状態から決まるので、レンダー中に導出する
+  const filtered = useMemo(() => {
     let list = spots;
     if (activeFilter !== 'all') list = list.filter((s) => s.type === activeFilter);
-    if (!showRestricted && !(activeFilter !== 'all' && STORE_TYPES.has(activeFilter))) {
-      list = list.filter(isOpenToAll);
-    }
+    if (!showRestricted && !patronageImplied) list = list.filter(isOpenToAll);
     if (query.trim()) list = list.filter((s) => matchesQuery(s, query));
-    setFiltered(list);
-  }, [activeFilter, showRestricted, spots, query]);
+    return list;
+  }, [activeFilter, showRestricted, patronageImplied, spots, query]);
 
   /**
    * 選択中の種別のうち、利用条件つきの件数。
