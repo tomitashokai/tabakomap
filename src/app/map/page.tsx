@@ -43,6 +43,15 @@ const ABOVE_SHEET = `calc(${NAV_HEIGHT + SHEET_HEIGHT + CONTROL_GAP}px + env(saf
  */
 const MAP_PADDING = { top: TOP_CHROME, bottom: NAV_HEIGHT + SHEET_HEIGHT, left: 0, right: 0 };
 
+/** 検索は名前と住所の部分一致。住所を含めないと「梅田」「難波」で引けない */
+function matchesQuery(spot: Spot, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    spot.name.toLowerCase().includes(q) || (spot.address?.toLowerCase().includes(q) ?? false)
+  );
+}
+
 export default function MapPage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [filtered, setFiltered] = useState<Spot[]>([]);
@@ -53,6 +62,7 @@ export default function MapPage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     supabase
@@ -79,8 +89,9 @@ export default function MapPage() {
     if (!showRestricted && !(activeFilter !== 'all' && STORE_TYPES.has(activeFilter))) {
       list = list.filter(isOpenToAll);
     }
+    if (query.trim()) list = list.filter((s) => matchesQuery(s, query));
     setFiltered(list);
-  }, [activeFilter, showRestricted, spots]);
+  }, [activeFilter, showRestricted, spots, query]);
 
   /**
    * 選択中の種別のうち、利用条件つきの件数。
@@ -88,7 +99,12 @@ export default function MapPage() {
    */
   const restrictedCount = patronageImplied
     ? 0
-    : spots.filter((s) => (activeFilter === 'all' || s.type === activeFilter) && !isOpenToAll(s)).length;
+    : spots.filter(
+        (s) =>
+          (activeFilter === 'all' || s.type === activeFilter) &&
+          !isOpenToAll(s) &&
+          matchesQuery(s, query),
+      ).length;
 
   const handleLocate = useCallback(() => {
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -124,7 +140,9 @@ export default function MapPage() {
         >
           <input
             type="text"
-            placeholder="🔍  場所・銘柄で検索..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="🔍  スポット名・住所で検索..."
             style={{
               width: '100%',
               padding: '12px 16px',
@@ -343,7 +361,9 @@ export default function MapPage() {
                   <div style={{ color: '#aaa', fontSize: 14, padding: '8px 0', lineHeight: 1.7 }}>
                     {restrictedCount > 0
                       ? '誰でも利用できる場所はありません。右上から店舗利用者向けの場所も表示できます。'
-                      : 'スポットがありません'}
+                      : query.trim()
+                        ? `「${query.trim()}」に一致するスポットはありません`
+                        : 'スポットがありません'}
                   </div>
                 )}
               </div>
