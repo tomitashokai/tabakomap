@@ -185,6 +185,16 @@ await clickButton('＋ 登録');
 await wait(3000);
 t = await text();
 check('📍 を押さずに現在地が入る', /現在地に登録します/.test(t));
+
+// 住所は逆ジオコーディングで作った下書き。空欄でも登録は通るので致命ではないが、
+// 空のまま入ると投稿スポットがどの区ページにも並ばなくなるので見ておく。
+// Mapbox の応答を待つぶん、固定の wait ではなく waitFor で粘る
+check(
+  '住所が現在地から埋まる',
+  await waitFor(() =>
+    page.evaluate(() => [...document.querySelectorAll('input')].some((i) => /大阪市[^\s]{1,5}区/.test(i.value)))
+  )
+);
 check(
   '登録ボタンが押せる',
   await page.evaluate(

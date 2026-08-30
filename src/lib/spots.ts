@@ -18,6 +18,25 @@ export async function fetchAllSpots(): Promise<Spot[]> {
   return (data ?? []) as Spot[];
 }
 
+/**
+ * 住所に「大阪市○○区」を含むスポットだけを取る。
+ *
+ * ilike はあくまで前段の絞り込みで、これだけを答えにしないこと。住所は自由入力
+ * （投稿分）も混ざるため、別の区名が文中に出てくる行も拾いうる。区の確定は
+ * 呼び出し側で extractWard() の完全一致に任せる。
+ */
+export async function fetchSpotsByWard(ward: string): Promise<Spot[]> {
+  // 区名は URL 由来。LIKE のパターン文字をそのまま渡さない
+  const escaped = ward.replace(/[\\%_]/g, (c) => `\\${c}`);
+  const { data, error } = await supabasePublic
+    .from('spots')
+    .select('*')
+    .ilike('address', `%大阪市${escaped}%`)
+    .limit(2000);
+  if (error) throw new Error(`[spots] fetch by ward failed: ${error.message}`);
+  return (data ?? []) as Spot[];
+}
+
 /** id 指定でスポット1件を取得。該当が無ければ null（エラーとは区別する） */
 export async function fetchSpotById(id: string): Promise<Spot | null> {
   const { data, error } = await supabasePublic
