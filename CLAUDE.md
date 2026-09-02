@@ -50,7 +50,7 @@ npx eslint src      # エラー0・警告0。増やさないこと（一覧の�
   専用のシークレットストアが無く、その環境を使う人は誰でも値を読めるため置いていない。
   したがって `scripts/import-*.mjs` など DB へ書き込むスクリプトは実行できない。
   スキーマやデータを変えたいときは `supabase/migrations/` に SQL を書いてコミットし、
-  適用はローカルか Supabase のダッシュボードから行う
+  適用はローカル（`node scripts/apply-migration.mjs <file>`）か Supabase のダッシュボードから行う
 - `scripts/screenshot.mjs` は実 Chrome に依存しているので動かない。
   見た目の確認は `npx tsc --noEmit` と `npx next build` を通したうえで、
   デプロイ後に https://tabakomap.vercel.app をブラウザで見る
@@ -81,9 +81,13 @@ npx eslint src      # エラー0・警告0。増やさないこと（一覧の�
   どの喫煙所を保存したか」を全件引ける状態を作らないため
 
 ### `brands`（86件）
-`id, name, maker, category, tar, nicotine, price, availability, image_url, created_at`
+`id, name, maker, category, tar, nicotine, price, price_as_of, price_source, availability, image_url, created_at`
 - `name` に unique 制約 `brands_name_key`
-- 価格49件が null。裏が取れなかったものは埋めずに空けてある
+- 価格37件が null。裏が取れなかったものは埋めずに空けてある
+- **`price_source` が null の行は参考価格。定価として表示してはいけない。**
+  シードの価格は実在 SKU の定価ではなく生成された概算で、公式カタログに無い銘柄も
+  混ざっている。公式で現物を確認できた分だけ `price_source`（`JT公式` / `PMJ公式`）と
+  `price_as_of` が入る。2026-09-02 時点で定価29件 / 参考20件 / 価格なし37件
 
 ## RLS
 
@@ -112,7 +116,15 @@ body: {"query": "<SQL>"}
 - `scripts/import-osaka.mjs` — 大阪市指定喫煙所 CSV の投入（service_role key が必要）
 - `scripts/import-osaka-shops.mjs` — 大阪市の喫煙可能店126件。`--dry-run` で解析だけ確認できる。
   同名かつ座標が近い既存行は上書きするので何度流しても増えない
-- `scripts/import-brands.mjs` / `scripts/brands-seed.json` — 銘柄マスタ
+- `scripts/apply-migration.mjs` — `supabase/migrations/` の SQL を Management API で適用する。
+  `node scripts/apply-migration.mjs <file>`、`--dry-run` で投げる SQL の確認だけ。
+  適用済みかを記録しないので、**マイグレーションは冪等に書くこと**
+  （`if not exists` / `create or replace` / `drop policy if exists`）
+- `scripts/import-brands.mjs` / `scripts/brands-seed.json` — 銘柄マスタ。
+  `scripts/brand-prices-verified.json` の裏取り済み定価を name で突き合わせて上書きし、
+  その行だけ `price_source` / `price_as_of` を入れる。**名前が一致しない項目はエラーで落とす**
+  （黙って無視すると、銘柄名を直したときに上書きが外れたことに気づけない）。
+  `--dry-run` で突き合わせ結果だけ表示（DB に触らない）
 - `scripts/gen-icons.mjs` — 依存なしの PWA アイコン生成
 - `scripts/smoke.mjs` — 実 Chrome で主要操作を通しで踏む回帰確認（19項目）。別ターミナルで
   `npx next start -p 3100` を上げてから `node scripts/smoke.mjs`。一度壊れていた
@@ -182,14 +194,32 @@ MapView に渡す `padding` も同じ定数から作る。これが無いと現�
 
 改定日の直前に埋めると数日で古くなる。**まとめて入れるなら改定日の直後にすること。**
 
-出典の取り方: JT（jti.co.jp）は UA を変えても 403 を返し自動取得できない。PMJ は
+出典の取り方: JT（jti.co.jp）は UA を変えても 403 を返し自動取得できない。**curl も WebFetch も
+403 だが、実 Chrome（puppeteer）なら 200 で読める。** `https://www.jti.co.jp/tobacco/products/<brand>/index.html`
+にブランド別の定価表がある。PMJ は
 `https://www.pmi.com/content/dam/pmicom/markets/japan/docs/` にプレスリリースの PDF が
-置いてあり curl で取れる（`pypdf` でテキストを抜ける）。glo / IQOS の公式は年齢認証で
-リダイレクトするため WebFetch では読めない。
+置いてあり curl で取れる（`pypdf` でテキストを抜ける。Read ツールは poppler が無く PDF を開けない）。
+glo / IQOS の公式は年齢認証でリダイレクトするため WebFetch では読めない。
+**BAT は公式・別紙 PDF とも辿れず、BAT 銘柄は未確認のまま。**
 
 **シードの銘柄名がメーカーの現行ラインナップと合っていないものがある。**
 「パーラメント・アクア・5」「バージニア・エス・メンソール・ワン」は PMJ の現行18銘柄に
 含まれておらず終売の可能性が高い。価格が欠けているのではなく、行そのものを見直すこと。
+**存在しない銘柄も行は消さず、参考価格として扱う方針。**
+
+### 「定価」と言えるのは `price_source` があるときだけ
+表示側で「価格があれば定価」と判定してはいけない。シードの価格は生成された概算なので、
+判定は `src/lib/types.ts` の `isVerifiedPrice()` / `formatPriceProvenance()` だけを見る
+（`usage_condition` と `isOpenToAll()` と同じ理由。判断基準を画面ごとに書くと食い違う）。
+
+- 定価（`price_source` あり）→ 金額に「JT公式 2026年9月2日時点」を添える
+- 参考価格（`price` あり `price_source` なし）→ 一覧は金額の下に小さく「参考」、
+  詳細は `580円（参考）` と注意書き。**銘柄名や規格自体が現行品と違う可能性まで書く**
+- **構造化データの `offers` は定価のときだけ出す。** 概算を載せると検索結果に
+  概算が「販売価格」として出る
+
+`price_as_of` は date 型なので PostgREST から `YYYY-MM-DD` で来る。`new Date()` に
+通すと UTC 解釈で前日に転ぶので文字列のまま切り出す。
 
 ### 投稿スポットの住所は Mapbox の下書き。書式を既存データに揃える
 `/areas` は住所から `extractWard()` で区を切り出して並べる。座標しか持たないスポットは
@@ -274,7 +304,12 @@ fetch はデフォルトでキャッシュされないので ISR は `next: { re
 
 ## 残タスク
 
-- 銘柄データの価格49件が null。**後述の落とし穴「価格は改定が続いている」を読んでから着手すること**
+- 銘柄データの価格37件が null。**後述の落とし穴「価格は改定が続いている」を読んでから着手すること。**
+  BAT 銘柄（クール・ラッキーストライク・ケント・ネオ）は公式が辿れず未確認。
+  参考価格20件も公式の裏が取れていない
+- **2026-10-01 に加熱式が再改定される**（JT プルーム用 +40 / テリア 640 / センティア 590 /
+  ネオ 570）。当日に `scripts/brand-prices-verified.json` の `price` と `as_of` を更新して
+  `node scripts/import-brands.mjs` を流す
 - 喫煙可能店の種別は店名からの推測。業態が読めない店は restaurant に寄っている
   （`scripts/import-osaka-shops.mjs` の `TYPE_RULES` で調整可能）
 - マイページの「設定」は項目だけあり「準備中」と出している（お気に入りは実装済み）
