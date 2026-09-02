@@ -208,12 +208,12 @@
       "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
     },
     {
-      "name": "ケント・ネオスティック・トゥルー・タバコ（glo用）",
+      "name": "ケント・トゥルー・タバコ（glo hyper用）",
       "official_name": "ケント･トゥルー･タバコ･glo hyper 用",
       "price": 520,
       "source": "BAT公式",
       "url": "https://prtimes.jp/a/?c=51859&r=186&f=d51859-186-774ddcd84e793c35f1f7c6f1e0665b2e.pdf"
     }
   ],
-  "_bat": "BAT の glo 用スティックはシリーズ内で定価が一律（2026-09-02 時点: neo 530 / KENT 520 / LUCKY STRIKE 480 / virto 580）。BAT の紙巻き現行ラインナップは KENT・KOOL・LUCKY STRIKE の3ブランドのみで（batj.com のポートフォリオ）、ペル・メルは現行品ではない。シードの BAT 紙巻き4銘柄（ケント・エス・シリーズ・ワン・100s / クール・マイルド / ラッキー・ストライク・エキスパートカット / ペル・メル・ケイエス・ブラック）は公式の定価表が見つからず未確認。"
+  "_bat": "BAT の glo 用スティックはシリーズ内で定価が一律（2026-09-02 時点: neo 530 / KENT 520 / LUCKY STRIKE 480 / virto 580）。BAT の紙巻き現行ラインナップは KENT・KOOL・LUCKY STRIKE の3ブランドのみ（batj.com のポートフォリオ）。残る BAT 紙巻き3件（ケント・エス・シリーズ・ワン・100s / クール・マイルド / ラッキー・ストライク・エキスパートカット）は実在する銘柄だが、シード名がサイズ抜きの総称（実際は「・14」「・ボックス」等のサイズ展開）で、公式の定価表も見つからないため未確認のまま。ラッキー・ストライク・エキスパートカットは 2026-06-01 に 450→470 円になったが出典が小売店の情報なので price_source には入れていない。"
 }

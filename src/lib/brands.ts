@@ -8,7 +8,7 @@ import type { Brand } from './types';
  * それが1時間そのまま配られてしまう。
  */
 
-/** 86件あるので全件読み。sitemap と関連銘柄の算出に使う */
+/** 82件あるので全件読み。sitemap と関連銘柄の算出に使う */
 export async function fetchAllBrands(): Promise<Brand[]> {
   const { data, error } = await supabasePublic.from('brands').select('*').limit(500);
   if (error) throw new Error(`[brands] fetch all failed: ${error.message}`);
