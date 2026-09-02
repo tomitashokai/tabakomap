@@ -30,14 +30,82 @@ const CATS: { key: BrandCategory | 'all'; label: string }[] = [
   })),
 ];
 
+/**
+ * 紙巻きの系統のおおよその知名度順。銘柄名の前方一致で判定するので
+ * 「メビウス・E・シリーズ・ワン」のような派生も同じ系統に落ちる。
+ *
+ * カテゴリ順だけだと紙巻き45件の中が名前順のままで、五十音の都合で
+ * 「ウィンストン」が「メビウス」「セブンスター」より上に来てしまう
+ */
+const CIGARETTE_FAMILY_ORDER = [
+  'メビウス',
+  'セブンスター',
+  'マールボロ',
+  'ラーク',
+  'ウィンストン',
+  'パーラメント',
+  'ケント',
+  'ナチュラル アメリカン スピリット',
+  'ピース',
+  'ホープ',
+  'エコー',
+  'わかば',
+  'クール',
+  'ラッキー・ストライク',
+  'フィリップモリス',
+  'ペル・メル',
+  'バージニア',
+];
+
+/** 加熱式は対応デバイスごとにまとめる。銘柄名が `（IQOS用）` の形で持っている */
+const HEATED_DEVICE_ORDER = ['IQOS', 'プルームX', 'glo'];
+
+/** 表に無い系統は末尾へ */
+function familyRank(name: string): number {
+  const i = CIGARETTE_FAMILY_ORDER.findIndex((prefix) => name.startsWith(prefix));
+  return i === -1 ? CIGARETTE_FAMILY_ORDER.length : i;
+}
+
+function deviceRank(name: string): number {
+  const i = HEATED_DEVICE_ORDER.findIndex((device) => name.includes(device));
+  return i === -1 ? HEATED_DEVICE_ORDER.length : i;
+}
+
+/**
+ * 枝分かれの深さ。中黒の数がそのまま派生の深さになっている。
+ * 「メビウス・オリジナル」を「メビウス・E・シリーズ・オリジナル」より先に出すため
+ */
+function depth(name: string): number {
+  return name.split('・').length;
+}
+
 /** category が null の行は末尾に寄せる */
 function catRank(c: BrandCategory | null): number {
   const i = c ? BRAND_CATEGORY_ORDER.indexOf(c) : -1;
   return i === -1 ? BRAND_CATEGORY_ORDER.length : i;
 }
 
-function byCategoryThenName(a: Brand, b: Brand): number {
-  return catRank(a.category) - catRank(b.category) || a.name.localeCompare(b.name, 'ja');
+/**
+ * 一覧の表示順。カテゴリ → 系統／デバイス → 本線優先 → 名前。
+ *
+ * 名前だけで並べると、探している人が多い定番が下に沈む。カテゴリを主キーにした
+ * うえで、紙巻きは系統、加熱式は対応デバイスでまとめ直す
+ */
+function byDisplayOrder(a: Brand, b: Brand): number {
+  const cat = catRank(a.category) - catRank(b.category);
+  if (cat !== 0) return cat;
+
+  if (a.category === 'cigarette') {
+    const fam = familyRank(a.name) - familyRank(b.name);
+    if (fam !== 0) return fam;
+    const d = depth(a.name) - depth(b.name);
+    if (d !== 0) return d;
+  } else if (a.category === 'heated') {
+    const dev = deviceRank(a.name) - deviceRank(b.name);
+    if (dev !== 0) return dev;
+  }
+
+  return a.name.localeCompare(b.name, 'ja');
 }
 
 export default function BrandsPage() {
@@ -53,7 +121,7 @@ export default function BrandsPage() {
       .select('*')
       .limit(200)
       .then(({ data }) => {
-        if (data) setBrands((data as Brand[]).sort(byCategoryThenName));
+        if (data) setBrands((data as Brand[]).sort(byDisplayOrder));
       });
   }, []);
 
