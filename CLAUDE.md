@@ -87,7 +87,7 @@ npx eslint src      # エラー0・警告0。増やさないこと（一覧の�
 - **`price_source` が null の行は参考価格。定価として表示してはいけない。**
   シードの価格は実在 SKU の定価ではなく生成された概算で、公式カタログに無い銘柄も
   混ざっている。公式で現物を確認できた分だけ `price_source`（`JT公式` / `PMJ公式`）と
-  `price_as_of` が入る。2026-09-02 時点で定価29件 / 参考20件 / 価格なし37件
+  `price_as_of` が入る。2026-09-02 時点で定価30件 / 参考19件 / 価格なし37件
 
 ## RLS
 
@@ -139,6 +139,10 @@ body: {"query": "<SQL>"}
   - **ピンを押すときは `openSheet()` を使い、戻り値を必ず `check` する。**
     `clickMarker` の戻り値を捨てると、ピンが消えていてもシートが遅れただけでも
     「文字が無い」NG になって区別がつかない
+- `scripts/fetch-page-text.mjs` — 実 Chrome で**外部**ページを開いてテキストを吐く。
+  価格の裏取り用。メーカー公式は curl も WebFetch も弾くので、これを通す。
+  `--grep 円` で一致行だけ、`--out` でファイル保存、年齢認証は表示文字で総当たりに押す。
+  **ローカル(Windows) 専用**
 - `scripts/screenshot.mjs` — 実 Chrome での目視検証。`--click` は複数指定可、`--center lat,lng`、
   `--type <文字列>` で最初の input に打ち込める（検索欄の検証用。`--click` より先に走る）、
   `SCREENSHOT_BASE_URL` で本番も撮れる。**ローカル(Windows) 専用**：クラウドでは
@@ -194,13 +198,25 @@ MapView に渡す `padding` も同じ定数から作る。これが無いと現�
 
 改定日の直前に埋めると数日で古くなる。**まとめて入れるなら改定日の直後にすること。**
 
-出典の取り方: JT（jti.co.jp）は UA を変えても 403 を返し自動取得できない。**curl も WebFetch も
-403 だが、実 Chrome（puppeteer）なら 200 で読める。** `https://www.jti.co.jp/tobacco/products/<brand>/index.html`
-にブランド別の定価表がある。PMJ は
-`https://www.pmi.com/content/dam/pmicom/markets/japan/docs/` にプレスリリースの PDF が
-置いてあり curl で取れる（`pypdf` でテキストを抜ける。Read ツールは poppler が無く PDF を開けない）。
-glo / IQOS の公式は年齢認証でリダイレクトするため WebFetch では読めない。
-**BAT は公式・別紙 PDF とも辿れず、BAT 銘柄は未確認のまま。**
+出典の取り方（メーカーごとに経路が違う。`scripts/fetch-page-text.mjs` を使う）:
+
+- **JT**（jti.co.jp）は UA を変えても curl も WebFetch も 403。**実 Chrome なら 200 で読める。**
+  `https://www.jti.co.jp/tobacco/products/<brand>/index.html` にブランド別の定価表がある
+- **PMJ** は `https://www.pmi.com/content/dam/pmicom/markets/japan/docs/` にプレスリリースの
+  PDF が置いてあり curl で取れる（`pypdf` でテキストを抜ける。Read ツールは poppler が無く
+  PDF を開けない）
+- **BAT** は公式（myglo.com）が Incapsula で**実 Chrome のヘッドレスでも 403**。
+  代わりに **PR TIMES の News release の別紙 PDF** に全銘柄の現行・改定後が載る
+  （company_id `51859`。リリースページの HTML から `/a/?c=51859&r=<n>&f=...pdf` を拾う）。
+  batj.com は実 Chrome で読めるが企業サイトなので価格は無い（ラインナップの確認には使える）
+- **財務省の認可一覧は使えない。** `https://www.mof.go.jp/policy/tab_salt/topics/kouriteika.html`
+  に全メーカーの認可 PDF が267本あるが、CID フォントで pypdf では半角カナに化け、
+  価格の数字も落ちる。しかも1本ずつが認可日単位の差分で全銘柄の一覧ではない
+- glo / IQOS の公式は年齢認証でリダイレクトするため WebFetch では読めない
+
+**BAT の glo 用スティックはシリーズ内で定価が一律**（2026-09-02 時点で neo 530 /
+KENT 520 / LUCKY STRIKE 480 / virto 580）。**BAT の紙巻き現行ラインナップは
+KENT・KOOL・LUCKY STRIKE の3ブランドのみ**で、ペル・メルは現行品ではない。
 
 **シードの銘柄名がメーカーの現行ラインナップと合っていないものがある。**
 「パーラメント・アクア・5」「バージニア・エス・メンソール・ワン」は PMJ の現行18銘柄に
@@ -305,10 +321,16 @@ fetch はデフォルトでキャッシュされないので ISR は `next: { re
 ## 残タスク
 
 - 銘柄データの価格37件が null。**後述の落とし穴「価格は改定が続いている」を読んでから着手すること。**
-  BAT 銘柄（クール・ラッキーストライク・ケント・ネオ）は公式が辿れず未確認。
-  参考価格20件も公式の裏が取れていない
+  参考価格19件も公式の裏が取れていない
+- **シードの BAT 銘柄7件は公式ラインナップに無く、裏が取れない。**
+  紙巻き4件（ケント・エス・シリーズ・ワン・100s / クール・マイルド /
+  ラッキー・ストライク・エキスパートカット / ペル・メル・ケイエス・ブラック）は
+  公式の定価表そのものが見つからない。加熱式3件（ネオ・テリック・タバコ /
+  ネオ・フレッシュ・ミックス / ラッキー・ストライク・フォー・グロー・タバコ・ロースト）は
+  シリーズは実在するがその銘柄が無い。**行を消すか実在銘柄に差し替えるかはユーザーの判断**
 - **2026-10-01 に加熱式が再改定される**（JT プルーム用 +40 / テリア 640 / センティア 590 /
-  ネオ 570）。当日に `scripts/brand-prices-verified.json` の `price` と `as_of` を更新して
+  BAT は neo 570 / KENT 550 / LUCKY STRIKE 500 / virto 600）。当日に
+  `scripts/brand-prices-verified.json` の `price` と `as_of` を更新して
   `node scripts/import-brands.mjs` を流す
 - 喫煙可能店の種別は店名からの推測。業態が読めない店は restaurant に寄っている
   （`scripts/import-osaka-shops.mjs` の `TYPE_RULES` で調整可能）

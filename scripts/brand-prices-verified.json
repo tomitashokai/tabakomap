@@ -1,7 +1,7 @@
 {
   "_note": "公式カタログ・公式プレスリリースで現物を確認できた銘柄の小売定価。brands-seed.json の price に上書きして投入する（import-brands.mjs）。ここに無い銘柄は参考価格として扱い、price_source を null のままにする。official_name は突き合わせた公式の表記で、seed 側の name と違っていてよい（表記ゆれ・サイズ違いを含む）。",
-  "_how_to_update": "JT は https://www.jti.co.jp/tobacco/products/<brand>/index.html にブランド別の定価表がある。WebFetch と curl は 403 になるので実 Chrome（puppeteer）で開くこと。PMJ は https://www.pmi.com/markets/japan/ja/ のプレスリリース PDF に改定一覧が載る。BAT は公式サイトが自動取得を弾き、別紙 PDF も辿れなかったため未確認。",
-  "_next_change": "2026-10-01 に加熱式が再度改定される（加熱式たばこの課税方式見直し第2段階）。JT プルーム用は全31銘柄 +40円、PMJ のテリアは 640円・センティアは 590円になる。その日にこのファイルの price と as_of を更新して import-brands.mjs を流すこと。",
+  "_how_to_update": "JT は https://www.jti.co.jp/tobacco/products/<brand>/index.html にブランド別の定価表がある。WebFetch と curl は 403 になるので実 Chrome（scripts/fetch-page-text.mjs）で開くこと。PMJ は https://www.pmi.com/markets/japan/ja/ のプレスリリース PDF に改定一覧が載る。BAT は公式サイト（myglo.com）が Incapsula で実 Chrome でも 403 だが、PR TIMES に出す News release の別紙 PDF に全銘柄の現行・改定後が載る（company_id 51859）。財務省 https://www.mof.go.jp/policy/tab_salt/topics/kouriteika.html に全メーカーの認可があるが、PDF が CID フォントで pypdf では半角カナに化け価格の数字も落ちるので使えない。",
+  "_next_change": "2026-10-01 に加熱式が再度改定される（加熱式たばこの課税方式見直し第2段階）。JT プルーム用は全31銘柄 +40円、PMJ のテリアは 640円・センティアは 590円。BAT は公式リリース済みで neo 530→570 / KENT 520→550 / LUCKY STRIKE 480→500 / virto 580→600。その日にこのファイルの price と as_of を更新して import-brands.mjs を流すこと。",
   "as_of": "2026-09-02",
   "prices": [
     {
@@ -206,6 +206,14 @@
       "price": 620,
       "source": "PMJ公式",
       "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    },
+    {
+      "name": "ケント・ネオスティック・トゥルー・タバコ（glo用）",
+      "official_name": "ケント･トゥルー･タバコ･glo hyper 用",
+      "price": 520,
+      "source": "BAT公式",
+      "url": "https://prtimes.jp/a/?c=51859&r=186&f=d51859-186-774ddcd84e793c35f1f7c6f1e0665b2e.pdf"
     }
-  ]
+  ],
+  "_bat": "BAT の glo 用スティックはシリーズ内で定価が一律（2026-09-02 時点: neo 530 / KENT 520 / LUCKY STRIKE 480 / virto 580）。BAT の紙巻き現行ラインナップは KENT・KOOL・LUCKY STRIKE の3ブランドのみで（batj.com のポートフォリオ）、ペル・メルは現行品ではない。シードの BAT 紙巻き4銘柄（ケント・エス・シリーズ・ワン・100s / クール・マイルド / ラッキー・ストライク・エキスパートカット / ペル・メル・ケイエス・ブラック）は公式の定価表が見つからず未確認。"
 }
