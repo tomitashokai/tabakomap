@@ -8,6 +8,7 @@ import {
   AVAILABILITY_LABELS,
   BRAND_CATEGORY_EMOJIS,
   BRAND_CATEGORY_ORDER,
+  isVerifiedPrice,
   type Brand,
   type BrandCategory,
 } from '@/lib/types';
@@ -254,9 +255,20 @@ export default function BrandsPage() {
                     )}
                   </div>
                 </div>
+                {/*
+                  裏の取れていない価格に「参考」を添える。金額だけを同じ体裁で並べると
+                  概算が定価に見える。出典と確認日は詳細ページに出す
+                */}
                 {brand.price != null && (
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', flexShrink: 0 }}>
-                    ¥{brand.price}
+                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>
+                      ¥{brand.price}
+                    </div>
+                    {!isVerifiedPrice(brand) && (
+                      <div style={{ fontSize: 10, color: '#aaa', fontWeight: 600, marginTop: 2 }}>
+                        参考
+                      </div>
+                    )}
                   </div>
                 )}
                 <span style={{ color: '#ccc', flexShrink: 0 }}>›</span>

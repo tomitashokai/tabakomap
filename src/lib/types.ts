@@ -35,9 +35,40 @@ export interface Brand {
   tar: number | null;
   nicotine: number | null;
   price: number | null;
+  /** 公式で定価を確認した日（`YYYY-MM-DD`）。null は未確認 */
+  price_as_of: string | null;
+  /** 価格の出典。**null は参考価格**で、定価として表示してはいけない */
+  price_source: string | null;
   availability: Availability | null;
   image_url: string | null;
   created_at: string;
+}
+
+/**
+ * その価格が公式の小売定価かどうか。
+ *
+ * `scripts/brands-seed.json` の価格は実在 SKU の定価ではなく生成された概算で、
+ * 公式カタログに無い銘柄も混ざっている。裏が取れた分だけ
+ * `scripts/brand-prices-verified.json` から `price_source` が入るので、
+ * **画面で「定価」と言えるのはこれが真のときだけ。**
+ */
+export function isVerifiedPrice(brand: Pick<Brand, 'price' | 'price_source'>): boolean {
+  return brand.price != null && brand.price_source != null;
+}
+
+/**
+ * 「JT公式 2026年9月2日時点」の形。参考価格（出典なし）では null を返す。
+ *
+ * `price_as_of` は date 型なので PostgREST から `YYYY-MM-DD` の文字列で来る。
+ * `new Date()` に通すと UTC 解釈で前日に転ぶので、文字列のまま切り出す。
+ */
+export function formatPriceProvenance(
+  brand: Pick<Brand, 'price_as_of' | 'price_source'>
+): string | null {
+  if (!brand.price_source) return null;
+  const m = brand.price_as_of?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return brand.price_source;
+  return `${brand.price_source} ${Number(m[1])}年${Number(m[2])}月${Number(m[3])}日時点`;
 }
 
 export interface Checkin {

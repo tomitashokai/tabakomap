@@ -7,6 +7,8 @@ import {
   AVAILABILITY_LABELS,
   BRAND_CATEGORY_EMOJIS,
   BRAND_CATEGORY_LABELS,
+  formatPriceProvenance,
+  isVerifiedPrice,
   type Brand,
 } from '@/lib/types';
 
@@ -22,6 +24,12 @@ function categoryLabel(brand: Brand): string {
   return brand.category ? BRAND_CATEGORY_LABELS[brand.category] : 'たばこ製品';
 }
 
+/** 価格の表記。裏が取れていない値には必ず「参考」を付ける */
+function priceText(brand: Brand): string | null {
+  if (brand.price == null) return null;
+  return isVerifiedPrice(brand) ? `${brand.price}円` : `${brand.price}円（参考）`;
+}
+
 /**
  * 数値の有無で説明文の情報量が大きく変わるので、あるものだけを繋ぐ。
  * 「タール —mg」のような空表記を description に混ぜない
@@ -31,7 +39,7 @@ function buildDescription(brand: Brand): string {
     brand.maker ? `メーカー: ${brand.maker}` : null,
     brand.tar != null ? `タール ${brand.tar}mg` : null,
     brand.nicotine != null ? `ニコチン ${brand.nicotine}mg` : null,
-    brand.price != null ? `価格 ${brand.price}円` : null,
+    brand.price != null ? `価格 ${priceText(brand)}` : null,
     brand.availability ? AVAILABILITY_LABELS[brand.availability] : null,
   ].filter(Boolean);
 
@@ -62,9 +70,14 @@ export default async function BrandPage({ params }: Props) {
   const related = await fetchRelatedBrands(brand);
   const emoji = brand.category ? BRAND_CATEGORY_EMOJIS[brand.category] : '🚬';
 
+  const provenance = formatPriceProvenance(brand);
+
   /**
-   * 価格が無い銘柄が49件あるため offers は価格があるときだけ付ける。
-   * 価格無しで offers を出すと構造化データとして不正になる
+   * offers は**公式で裏の取れた定価のときだけ**付ける。
+   *
+   * 価格が無い銘柄が49件あるので価格の有無を見るのは元からだが、シードの価格は
+   * 生成された概算なので、それを offers に載せると検索結果に概算が「販売価格」として
+   * 出てしまう。参考価格は本文に「参考」と添えて出すだけにする
    */
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -72,7 +85,7 @@ export default async function BrandPage({ params }: Props) {
     name: brand.name,
     category: categoryLabel(brand),
     ...(brand.maker ? { brand: { '@type': 'Brand', name: brand.maker } } : {}),
-    ...(brand.price != null
+    ...(isVerifiedPrice(brand)
       ? {
           offers: {
             '@type': 'Offer',
@@ -116,7 +129,7 @@ export default async function BrandPage({ params }: Props) {
           <Row label="種別" value={categoryLabel(brand)} />
           <Row label="タール" value={brand.tar != null ? `${brand.tar}mg` : '表記なし'} />
           <Row label="ニコチン" value={brand.nicotine != null ? `${brand.nicotine}mg` : '表記なし'} />
-          <Row label="価格" value={brand.price != null ? `${brand.price}円` : '不明'} />
+          <Row label="価格" value={priceText(brand) ?? '不明'} sub={provenance ?? undefined} />
           <Row
             label="流通"
             value={brand.availability ? AVAILABILITY_LABELS[brand.availability] : '不明'}
@@ -134,6 +147,24 @@ export default async function BrandPage({ params }: Props) {
           <p style={note}>
             価格は裏付けが取れなかったため掲載していません。定価は改定されることがあるため、
             メーカーの公式サイトでご確認ください。
+          </p>
+        )}
+        {/*
+          出典なしの価格は概算で、公式カタログに無い銘柄も混ざっている。
+          「値段が違う」ではなく「この銘柄自体が現行品でないかもしれない」ので、
+          金額の注意書きだけで済ませない
+        */}
+        {brand.price != null && !isVerifiedPrice(brand) && (
+          <p style={note}>
+            この価格は公式の定価を確認できていない参考値です。銘柄名や規格が現行品と
+            異なる場合もあります。正確な定価は
+            {brand.maker ? `${brand.maker}の` : 'メーカーの'}公式サイトでご確認ください。
+          </p>
+        )}
+        {isVerifiedPrice(brand) && (
+          <p style={note}>
+            価格は{provenance}の小売定価です。2026年は改定が続いており、加熱式は
+            2026年10月1日にも改定が予定されています。
           </p>
         )}
 
@@ -164,7 +195,12 @@ export default async function BrandPage({ params }: Props) {
                   </span>
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{r.name}</span>
                   {r.price != null && (
-                    <span style={{ fontSize: 13, fontWeight: 700 }}>¥{r.price}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>
+                      ¥{r.price}
+                      {!isVerifiedPrice(r) && (
+                        <span style={{ fontSize: 10, color: '#aaa', marginLeft: 3 }}>参考</span>
+                      )}
+                    </span>
                   )}
                   <span style={{ color: '#ccc' }}>›</span>
                 </Link>
@@ -193,7 +229,18 @@ export default async function BrandPage({ params }: Props) {
   );
 }
 
-function Row({ label, value, last }: { label: string; value: string; last?: boolean }) {
+/** `sub` は値の下に小さく添える補足（価格の出典と確認日）。無ければ行の見た目は変わらない */
+function Row({
+  label,
+  value,
+  sub,
+  last,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  last?: boolean;
+}) {
   return (
     <div
       style={{
@@ -205,7 +252,12 @@ function Row({ label, value, last }: { label: string; value: string; last?: bool
       }}
     >
       <dt style={{ fontSize: 13, color: '#888', flexShrink: 0 }}>{label}</dt>
-      <dd style={{ fontSize: 14, fontWeight: 600, margin: 0, textAlign: 'right' }}>{value}</dd>
+      <dd style={{ margin: 0, textAlign: 'right' }}>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>{value}</span>
+        {sub && (
+          <span style={{ display: 'block', fontSize: 11, color: '#999', marginTop: 3 }}>{sub}</span>
+        )}
+      </dd>
     </div>
   );
 }

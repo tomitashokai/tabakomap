@@ -1,0 +1,211 @@
+{
+  "_note": "公式カタログ・公式プレスリリースで現物を確認できた銘柄の小売定価。brands-seed.json の price に上書きして投入する（import-brands.mjs）。ここに無い銘柄は参考価格として扱い、price_source を null のままにする。official_name は突き合わせた公式の表記で、seed 側の name と違っていてよい（表記ゆれ・サイズ違いを含む）。",
+  "_how_to_update": "JT は https://www.jti.co.jp/tobacco/products/<brand>/index.html にブランド別の定価表がある。WebFetch と curl は 403 になるので実 Chrome（puppeteer）で開くこと。PMJ は https://www.pmi.com/markets/japan/ja/ のプレスリリース PDF に改定一覧が載る。BAT は公式サイトが自動取得を弾き、別紙 PDF も辿れなかったため未確認。",
+  "_next_change": "2026-10-01 に加熱式が再度改定される（加熱式たばこの課税方式見直し第2段階）。JT プルーム用は全31銘柄 +40円、PMJ のテリアは 640円・センティアは 590円になる。その日にこのファイルの price と as_of を更新して import-brands.mjs を流すこと。",
+  "as_of": "2026-09-02",
+  "prices": [
+    {
+      "name": "メビウス・オリジナル",
+      "official_name": "メビウス",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・ライト",
+      "official_name": "メビウス・ライト",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・スーパーライト",
+      "official_name": "メビウス・スーパーライト",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・エクストラライト",
+      "official_name": "メビウス・エクストラライト",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・ワン",
+      "official_name": "メビウス・ワン",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・リッチ",
+      "official_name": "メビウス・リッチ",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・ストロング・ワン",
+      "official_name": "メビウス・ストロング・ワン・１００’ｓ",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・プレミアムメンソール・オプション・イエロー・5",
+      "official_name": "メビウス・プレミアムメンソール・オプション・イエロー・５",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・プレミアムメンソール・オプション・イエロー・ワン・100s",
+      "official_name": "メビウス・プレミアムメンソール・オプション・イエロー・ワン・１００’ｓ",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・プレミアムメンソール・オプション・パープル・5",
+      "official_name": "メビウス・プレミアムメンソール・オプション・パープル・５",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・プレミアムメンソール・オプション・パープル・8",
+      "official_name": "メビウス・プレミアムメンソール・オプション・パープル・８",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "メビウス・プレミアムメンソール・オプション・パープル・ワン・100s",
+      "official_name": "メビウス・プレミアムメンソール・オプション・パープル・ワン・１００’ｓ",
+      "price": 580,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/mevius/index.html"
+    },
+    {
+      "name": "セブンスター",
+      "official_name": "セブンスター",
+      "price": 600,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/sevenstars/index.html"
+    },
+    {
+      "name": "セブンスター・メンソール・8",
+      "official_name": "セブンスター・メンソール・８",
+      "price": 600,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/sevenstars/index.html"
+    },
+    {
+      "name": "ウィンストン・キャビン・レッド・8",
+      "official_name": "ウィンストン・キャビン・レッド・８・ボックス",
+      "price": 540,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/winston/index.html"
+    },
+    {
+      "name": "エコー",
+      "official_name": "エコー・KS",
+      "price": 500,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/others/index.html"
+    },
+    {
+      "name": "わかば",
+      "official_name": "わかば・KS",
+      "price": 500,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/others/index.html"
+    },
+    {
+      "name": "ホープ（10本入り）",
+      "official_name": "ホープ（１０本入）",
+      "price": 300,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/hope/index.html"
+    },
+    {
+      "name": "メビウス・ディープ・レギュラー（プルームX用）",
+      "official_name": "メビウス・ディープ・レギュラー・プルーム用",
+      "price": 550,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/plooms/index.html"
+    },
+    {
+      "name": "キャメル・リッチ・レギュラー（プルームX用）",
+      "official_name": "キャメル・リッチ・プルーム用",
+      "price": 530,
+      "source": "JT公式",
+      "url": "https://www.jti.co.jp/tobacco/products/plooms/index.html"
+    },
+    {
+      "name": "マールボロ",
+      "official_name": "マールボロ",
+      "price": 620,
+      "source": "PMJ公式",
+      "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    },
+    {
+      "name": "マールボロ・ブラック・メンソール",
+      "official_name": "マールボロ・ブラック・メンソール・8・ボックス",
+      "price": 620,
+      "source": "PMJ公式",
+      "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    },
+    {
+      "name": "テリア・レギュラー（IQOS用）",
+      "official_name": "テリア レギュラー",
+      "price": 620,
+      "source": "PMJ公式",
+      "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    },
+    {
+      "name": "テリア・リッチ・レギュラー（IQOS用）",
+      "official_name": "テリア リッチ レギュラー",
+      "price": 620,
+      "source": "PMJ公式",
+      "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    },
+    {
+      "name": "テリア・バランスド・レギュラー（IQOS用）",
+      "official_name": "テリア バランスド レギュラー",
+      "price": 620,
+      "source": "PMJ公式",
+      "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    },
+    {
+      "name": "テリア・ブラック・メンソール（IQOS用）",
+      "official_name": "テリア ブラック メンソール",
+      "price": 620,
+      "source": "PMJ公式",
+      "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    },
+    {
+      "name": "テリア・イエロー・メンソール（IQOS用）",
+      "official_name": "テリア イエロー メンソール",
+      "price": 620,
+      "source": "PMJ公式",
+      "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    },
+    {
+      "name": "テリア・パープル・メンソール（IQOS用）",
+      "official_name": "テリア パープル メンソール",
+      "price": 620,
+      "source": "PMJ公式",
+      "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    },
+    {
+      "name": "テリア・ミント（IQOS用）",
+      "official_name": "テリア ミント",
+      "price": 620,
+      "source": "PMJ公式",
+      "url": "https://www.pmi.com/content/dam/pmicom/markets/japan/docs/20260217-pmj-pressrelease-price-increase-approval.pdf"
+    }
+  ]
+}
